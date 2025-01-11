@@ -1,0 +1,61 @@
+{% extends 'tracker/base.html' %}
+
+{% block content %}
+
+<h1>MY Expenses</h1>
+<a href="{% url 'add_expense' %}" class="btn btn-primary mb-3">Add New Expense</a>
+<a href="{% url 'export_csv' %}" class="btn btn-primary mb-3">Download CSV</a>
+<a href="{% url 'send_email' %}" class="btn btn-primary mb-3">Send Email</a>
+
+<form method="GET" class ="mb-3">
+    <div class = "col-md-3">
+        <label for="category" class="form-label">Category</label>
+        <select name="category" id="category" class="form-select">
+            <option value="">All</option>
+            {% for category in categories %}
+            <option value="{{ category.id }}" {% if category.id == selected_category %} selected {% endif %}>{{ category.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+    <div class="col-md-3">
+        <label for="start_date" class="form-label">Start Date</label>
+        <input type="date" name="start_date" id="start_date" class="form-control" value="{{ start_date }}">
+    </div>
+    <div class="col-md-3">
+        <label for="end_date" class="form-label">End Date</label>
+        <input type="date" name="end_date" id="end_date" class="form-control" value="{{ end_date }}">
+    </div>
+    <div class="col-md-3" d-flex align-items-end>
+        <button type="submit" class="btn btn-primary mt-3">Filter</button>
+    </div>
+</form>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Title</th>
+            <th>Amount</th>
+            <th>Date</th>
+            <th>Category</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for expense in expenses %}
+        <tr>
+            <td>{{ expense.title }}</td>
+            <td>{{ expense.amount }}</td>
+            <td>{{ expense.date }}</td>
+            <td>{{ expense.category.name }}</td>
+            <td>
+                <a href="{% url 'edit_expense' expense.id %}" class="btn btn-warning btn-sm">Edit</a>
+                <a href="{% url 'delete_expense' expense.id %}" class="btn btn-danger btn-sm">Delete</a>
+            </td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="5" class="text-center">No expenses found.</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

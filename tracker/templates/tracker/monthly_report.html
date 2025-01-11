@@ -1,0 +1,26 @@
+{% extends 'tracker/base.html' %}
+
+{% block content %}
+<h1>Monthly Expense Report</h1>
+
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Month</th>
+            <th>Total Expenses</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for x in monthly_expenses %}
+        <tr>
+            <td>{{ x.month }}</td>
+            <td>₹{{ x.total }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+            <td colspan="2" class="text-center">No expenses found for the year {{current_year}}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

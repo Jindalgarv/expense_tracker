@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Expense Tracker</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="{% url 'expense_list' %}">Expense Tracker</a>
+            <div class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'expense_list' %}">Expenses</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'add_expense' %}">Add Expense</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'monthly_report' %}">Monthly Report</a></li>
+                        <li class="nav-item">
+                            <form method="POST" action="{% url 'logout' %}" style="display: inline;">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-link nav-link" style="border: none; background: none; cursor: pointer;">
+                                Logout
+                            </button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
+                        <li class="nav-item"><a class="nav-link" href="{% url 'signup' %}">Sign Up</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+    {% if messages %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Automatically remove messages after a few seconds
+        const messages = document.querySelectorAll('.message-item');
+        messages.forEach((message) => {
+            setTimeout(() => {
+                message.style.display = 'none';
+            }, 4000); // Adjust time as needed (4000ms = 4 seconds)
+        });
+    });
+</script>
+<style>
+/* Center the messages container */
+.messages-container {
+    position: fixed;
+    top: 10%; /* Center vertically */
+    left: 50%; /* Center horizontally */
+    transform: translate(-50%, -50%); /* Adjust for center alignment */
+    z-index: 1000; /* Ensure it appears above other elements */
+    width: 80%; /* Adjust width as needed */
+    max-width: 400px; /* Set a maximum width for large screens */
+    text-align: center; /* Center-align text */
+}
+
+/* Messages List */
+.messages {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Individual Message Item */
+.message-item {
+    margin: 10px auto;
+    padding: 15px 20px;
+    border-radius: 8px;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    opacity: 0; /* Hidden by default */
+    animation: fadeInOut 4s ease-in-out;
+    display: inline-block; /* Ensures messages stay centered */
+}
+
+/* Success Message */
+.message-item.success {
+    background-color: #28a745;
+}
+
+/* Error Message */
+.message-item.error {
+    background-color: #dc3545;
+}
+
+/* Warning Message */
+.message-item.warning {
+    background-color: #ffc107;
+    color: #000;
+}
+
+/* Info Message */
+.message-item.info {
+    background-color: #17a2b8;
+}
+
+/* Fade-in and Fade-out Animation */
+@keyframes fadeInOut {
+    0% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+    10%, 90% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.9);
+    }
+}
+</style>
+<div class="messages-container">
+    <ul class="messages">
+        {% for message in messages %}
+        <li class="message-item {{ message.tags }}">{{ message }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+    
+
+    <div class="container mt-4">
+        {% block content %}
+        <!-- Page-specific content will be inserted here -->
+        {% endblock %}
+    </div>
+</body>
+</html>

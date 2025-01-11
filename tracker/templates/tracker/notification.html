@@ -1,0 +1,8 @@
+<h2>Notifications</h2>
+<ul>
+    {% for x in notifications %}
+    <li>
+        {{ x.message }} -  {{x.created_at|date:"d-m-Y H:i"}}
+    </li>
+    {%endfor%}
+</ul>
