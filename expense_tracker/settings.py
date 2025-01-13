@@ -25,7 +25,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.environ.get('SECRET_KEY', 'default-unsafe-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 # ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0','expense-tracker-3v4h.onrender.com/']
 ALLOWED_HOSTS = ['*']
 # CSRF_TRUSTED_ORIGINS = ["https://expense-tracker-3v4h.onrender.com/",'http://0.0.0.0']
