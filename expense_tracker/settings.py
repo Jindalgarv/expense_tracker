@@ -29,7 +29,7 @@ DEBUG = True
 # ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0','expense-tracker-3v4h.onrender.com/']
 ALLOWED_HOSTS = ['*']
 # CSRF_TRUSTED_ORIGINS = ["https://expense-tracker-3v4h.onrender.com/",'http://0.0.0.0']
-CSRF_TRUSTED_ORIGINS = ['https://expense-tracker-3v4h.onrender.com/','http://0.0.0.0',]
+CSRF_TRUSTED_ORIGINS = ['https://expense-tracker-3v4h.onrender.com']
 # Application definition
 
 CSRF_COOKIE_SECURE = True
