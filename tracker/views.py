@@ -17,6 +17,7 @@ import csv
 from django.http import HttpResponse
 from .models import Expense
 from django.contrib import messages
+from .forms import UserRegisterForm
 
 
 
@@ -80,13 +81,13 @@ def delete_expense(request, expense_id):
 
 def signup(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = UserRegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
             return redirect('expense_list')
     else:
-        form = UserCreationForm()
+        form = UserRegisterForm()
     return render(request, 'registration/signup.html', {'form': form})
 
 MONTHS = {
