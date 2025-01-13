@@ -21,7 +21,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-vtd3xi-&9=bo8xo0)5p#fgtax_-uh#)uhqy8hs03veh(x(iwy!'
+#SECRET_KEY = 'django-insecure-vtd3xi-&9=bo8xo0)5p#fgtax_-uh#)uhqy8hs03veh(x(iwy!'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'default-unsafe-key')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = False
@@ -53,7 +54,7 @@ MIDDLEWARE = [
 ]
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 ROOT_URLCONF = 'expense_tracker.urls'
 
@@ -79,9 +80,23 @@ WSGI_APPLICATION = 'expense_tracker.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': 'exp',
+#         # 'USER': 'garv',
+#         'PASSWORD': 'jindal',
+#         'HOST': '127.0.0.1',  # Or 'localhost'
+#         'PORT': '5432',       # Default PostgreSQL port
+#     }
+# }
+
 DATABASES = {
-    'default': dj_database_url.config(default=os.environ.get('DATABASE_URL'))
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',  # Database engine
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
+}
 
 
 # Password validation
