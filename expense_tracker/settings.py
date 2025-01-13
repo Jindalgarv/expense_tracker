@@ -32,6 +32,9 @@ ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = ['https://expense-tracker-3v4h.onrender.com/','http://0.0.0.0',]
 # Application definition
 
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+
 INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
