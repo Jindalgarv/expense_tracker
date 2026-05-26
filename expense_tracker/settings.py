@@ -11,6 +11,10 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-dev-key-change-in-pro
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = ['*']
 
+# Trust the X-Forwarded-Proto header to detect HTTPS behind reverse proxies (Railway/Render)
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+
 INSTALLED_APPS = [
     'tracker.apps.TrackerConfig',
     'crispy_forms',
