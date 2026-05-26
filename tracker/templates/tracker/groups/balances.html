@@ -1,0 +1,127 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Balances — {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>⚖️ Group Balances</h1>
+        <div class="page-subtitle">Detailed financial breakdown inside "{{ group.name }}".</div>
+    </div>
+    <div>
+        <a href="{% url 'group_detail' group.id %}" class="btn btn-outline">
+            ⬅️ Back to Group
+        </a>
+    </div>
+</div>
+
+<div class="animate-slide-up" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); max-width: 900px; margin: 0 auto; align-items: start;">
+    <!-- Left Column: Individual Net Balances -->
+    <div class="card card-glass">
+        <div class="card-header">
+            <h2>👥 Member Net Totals</h2>
+            <span class="text-muted" style="font-size: 0.8rem;">Sum of all expenses</span>
+        </div>
+        <div class="card-body" style="padding: 0; display: flex; flex-direction: column;">
+            {% if member_balances %}
+                {% for mb in member_balances %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-color);">
+                    <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                        <div class="avatar avatar-sm" style="background-color: {{ mb.user|avatar_color }}; color: #0f1117; font-weight: 700;">
+                            {{ mb.user|initials }}
+                        </div>
+                        <span style="font-weight: 600; font-size: 0.92rem;">
+                            {{ mb.user.get_full_name|default:mb.user.username }}
+                            {% if mb.user == user %}<span class="text-muted" style="font-weight: 400; font-size: 0.8rem;">(You)</span>{% endif %}
+                        </span>
+                    </div>
+                    
+                    <span class="{% if mb.net_balance > 0 %}text-positive{% elif mb.net_balance < 0 %}text-negative{% else %}text-muted{% endif %}" style="font-weight: 700; font-size: 0.95rem;">
+                        {% if mb.net_balance > 0 %}
+                        owes them {{ mb.net_balance|currency }}
+                        {% elif mb.net_balance < 0 %}
+                        owes {{ mb.net_balance|abs_value|currency }}
+                        {% else %}
+                        Settled Up
+                        {% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Column: Simplified Debts Matrix -->
+    <div class="card card-glass">
+        <div class="card-header">
+            <h2>🧠 Debt Simplification</h2>
+            <span class="badge badge-positive" style="font-size: 0.65rem;">Auto-Optimized</span>
+        </div>
+        <div class="card-body">
+            {% if group.simplify_debts %}
+                {% if simplified %}
+                    <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: var(--space-md);">
+                        SplitWise calculated these optimized payments to settle all debts in the fewest transactions possible:
+                    </p>
+                    <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                        {% for from_u, to_u, amt in simplified %}
+                        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--border-color); background: rgba(255,255,255,0.01);">
+                            <div style="display: flex; align-items: center; gap: var(--space-sm); flex: 1;">
+                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                    <div class="avatar avatar-sm" style="background-color: {{ from_u|avatar_color }}; color: #0f1117; font-weight: 700;">
+                                        {{ from_u|initials }}
+                                    </div>
+                                    <span style="font-size: 0.72rem; font-weight: 600; margin-top: 2px;">
+                                        {{ from_u.first_name|default:from_u.username }}
+                                    </span>
+                                </div>
+                                
+                                <span style="font-size: 1.2rem; color: var(--text-disabled); margin: 0 auto;">➡️</span>
+                                
+                                <div style="display: flex; flex-direction: column; align-items: center;">
+                                    <div class="avatar avatar-sm" style="background-color: {{ to_u|avatar_color }}; color: #0f1117; font-weight: 700;">
+                                        {{ to_u|initials }}
+                                    </div>
+                                    <span style="font-size: 0.72rem; font-weight: 600; margin-top: 2px;">
+                                        {{ to_u.first_name|default:to_u.username }}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div style="text-align: right; margin-left: var(--space-md);">
+                                <span class="text-positive" style="font-family: 'Outfit', sans-serif; font-size: 1.15rem; font-weight: 700; color: var(--color-primary);">
+                                    {{ amt|currency }}
+                                </span>
+                                {% if from_u == user %}
+                                <div style="margin-top: 2px;">
+                                    <a href="{% url 'settle_up' %}?group={{ group.id }}&to={{ to_u.id }}" class="btn btn-primary btn-sm" style="padding: 2px 8px; font-size: 0.7rem;">Settle</a>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state" style="text-align: center; padding: var(--space-xl) var(--space-md); color: var(--text-secondary);">
+                        <div style="font-size: 2.5rem; margin-bottom: var(--space-sm);">✨</div>
+                        <h4>Everyone is settled up!</h4>
+                        <p style="font-size: 0.85rem; margin-top: 4px;">No outstanding payments are needed within the group.</p>
+                    </div>
+                {% endif %}
+            {% else %}
+                <div class="empty-state" style="text-align: center; padding: var(--space-xl) var(--space-md); color: var(--text-secondary);">
+                    <div style="font-size: 2.5rem; margin-bottom: var(--space-sm);">🔒</div>
+                    <h4>Debt simplification is disabled</h4>
+                    <p style="font-size: 0.85rem; margin-top: 4px; max-width: 300px; margin-left: auto; margin-right: auto;">
+                        Turn on "Simplify group debts" in the group settings to automatically compute minimal transactions.
+                    </p>
+                    <a href="{% url 'edit_group' group.id %}" class="btn btn-ghost btn-sm text-primary" style="margin-top: var(--space-md);">
+                        ✏️ Edit Settings
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

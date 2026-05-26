@@ -1,0 +1,96 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Monthly Reports — {{ current_year }}{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>📊 Monthly Report</h1>
+        <div class="page-subtitle">Monthly expense summaries and aggregates for the year {{ current_year }}.</div>
+    </div>
+    <div>
+        <a href="{% url 'export_csv' %}" class="btn btn-primary">
+            📥 Export CSV
+        </a>
+    </div>
+</div>
+
+<div class="animate-slide-up" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); max-width: 900px; margin: 0 auto; align-items: start;">
+    <!-- Expenses paid table card -->
+    <div class="card card-glass">
+        <div class="card-header">
+            <h2>💰 Expenses You Paid</h2>
+            <span class="text-muted" style="font-size: 0.8rem;">Your outgoing flows</span>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if monthly_paid %}
+                <div class="table-container">
+                    <table class="data-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color); font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">
+                                <th style="padding: var(--space-md);">Month</th>
+                                <th style="padding: var(--space-md); text-align: right;">Total Paid</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in monthly_paid %}
+                            <tr style="border-bottom: 1px solid var(--border-color); font-size: 0.9rem;">
+                                <td style="padding: var(--space-md); font-weight: 500; color: var(--text-primary);">
+                                    {{ item.month }}
+                                </td>
+                                <td style="padding: var(--space-md); text-align: right; font-weight: 700; color: var(--color-primary);">
+                                    {{ item.total|currency }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state" style="text-align: center; padding: var(--space-xl) var(--space-md); color: var(--text-secondary);">
+                    <p style="font-size: 0.85rem;">No payments logged for this year.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Your share of expenses card -->
+    <div class="card card-glass">
+        <div class="card-header">
+            <h2>⚖️ Your Owed Share</h2>
+            <span class="text-muted" style="font-size: 0.8rem;">Actual consumption share</span>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if monthly_owed %}
+                <div class="table-container">
+                    <table class="data-table" style="width: 100%; border-collapse: collapse; text-align: left;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid var(--border-color); font-size: 0.85rem; font-weight: 600; color: var(--text-secondary);">
+                                <th style="padding: var(--space-md);">Month</th>
+                                <th style="padding: var(--space-md); text-align: right;">Total Share</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in monthly_owed %}
+                            <tr style="border-bottom: 1px solid var(--border-color); font-size: 0.9rem;">
+                                <td style="padding: var(--space-md); font-weight: 500; color: var(--text-primary);">
+                                    {{ item.month }}
+                                </td>
+                                <td style="padding: var(--space-md); text-align: right; font-weight: 700; color: var(--color-negative);">
+                                    {{ item.total|currency }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state" style="text-align: center; padding: var(--space-xl) var(--space-md); color: var(--text-secondary);">
+                    <p style="font-size: 0.85rem;">No shared expense shares mapped to your account this year.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

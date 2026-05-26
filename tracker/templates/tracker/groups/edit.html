@@ -1,0 +1,65 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Edit Group — {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>📁 Edit Group Settings</h1>
+        <div class="page-subtitle">Update settings for "{{ group.name }}".</div>
+    </div>
+    <div>
+        <a href="{% url 'group_detail' group.id %}" class="btn btn-outline">
+            ⬅️ Cancel
+        </a>
+    </div>
+</div>
+
+<div class="animate-slide-up" style="max-width: 600px; margin: 0 auto;">
+    <div class="card card-glass">
+        <div class="card-body">
+            <form method="POST" style="display: flex; flex-direction: column; gap: var(--space-md);">
+                {% csrf_token %}
+                
+                {% if form.errors %}
+                <div style="background: rgba(255,107,107,0.1); border: 1px solid var(--color-negative); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); color: var(--color-negative); font-size: 0.85rem;">
+                    {{ form.errors }}
+                </div>
+                {% endif %}
+
+                <!-- Group Name -->
+                <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                    <label for="id_name" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Group Name</label>
+                    {{ form.name }}
+                </div>
+
+                <!-- Group Type -->
+                <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                    <label for="id_group_type" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Group Type</label>
+                    {{ form.group_type }}
+                </div>
+
+                <!-- Description -->
+                <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                    <label for="id_description" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Description</label>
+                    {{ form.description }}
+                </div>
+
+                <!-- Simplify Debts -->
+                <div style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) 0;">
+                    {{ form.simplify_debts }}
+                    <label for="id_simplify_debts" style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); cursor: pointer; user-select: none;">
+                        🧠 Simplify group debts (greedy algorithm)
+                    </label>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-sm);">
+                    <a href="{% url 'group_detail' group.id %}" class="btn btn-outline">Cancel</a>
+                    <button type="submit" class="btn btn-primary">💾 Save Settings</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

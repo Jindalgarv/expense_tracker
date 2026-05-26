@@ -1,0 +1,174 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>Welcome back, {{ user.first_name|default:user.username }}!</h1>
+        <div class="page-subtitle">Here is what's happening with your expenses today.</div>
+    </div>
+    <div class="flex gap-sm">
+        <a href="{% url 'add_expense' %}" class="btn btn-primary">
+            <span style="font-size: 1.1rem; margin-right: 4px;">➕</span> Add Expense
+        </a>
+        <a href="{% url 'create_group' %}" class="btn btn-secondary">
+            <span style="font-size: 1.1rem; margin-right: 4px;">📁</span> Create Group
+        </a>
+        <a href="{% url 'settle_up' %}" class="btn btn-outline-primary">
+            <span style="font-size: 1.1rem; margin-right: 4px;">🤝</span> Settle Up
+        </a>
+    </div>
+</div>
+
+<!-- Stats Grid -->
+<div class="stats-grid animate-slide-up" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-xl);">
+    <!-- Net Balance -->
+    <div class="stat-card">
+        <div class="stat-icon {% if balance_data.net_balance >= 0 %}green{% else %}red{% endif %}">
+            ⚖️
+        </div>
+        <div class="stat-value {% if balance_data.net_balance > 0 %}text-positive{% elif balance_data.net_balance < 0 %}text-negative{% else %}text-muted{% endif %}" id="netBalanceVal">
+            {{ balance_data.net_balance|currency }}
+        </div>
+        <div class="stat-label">Total Net Balance</div>
+    </div>
+
+    <!-- Owed to You -->
+    <div class="stat-card">
+        <div class="stat-icon green">
+            📈
+        </div>
+        <div class="stat-value text-positive" id="owedToYouVal">
+            {{ balance_data.total_owed_to_you|currency }}
+        </div>
+        <div class="stat-label">You are owed</div>
+    </div>
+
+    <!-- You Owe -->
+    <div class="stat-card">
+        <div class="stat-icon red">
+            📉
+        </div>
+        <div class="stat-value text-negative" id="youOweVal">
+            {{ balance_data.total_you_owe|currency }}
+        </div>
+        <div class="stat-label">You owe</div>
+    </div>
+</div>
+
+<!-- Two Column Layout -->
+<div class="animate-slide-up" style="display: grid; grid-template-columns: 1.6fr 1fr; gap: var(--space-xl); margin-top: var(--space-xl); align-items: start;">
+    <!-- Left Column: Recent Activity Feed -->
+    <div class="card card-glass">
+        <div class="card-header">
+            <h2>📋 Recent Activity</h2>
+            <a href="{% url 'activity_feed' %}" class="btn btn-ghost btn-sm">View Feed</a>
+        </div>
+        <div class="card-body">
+            {% if recent_activity %}
+            <div class="activity-timeline" style="position: relative; padding-left: 24px; border-left: 2px solid var(--border-color); display: flex; flex-direction: column; gap: var(--space-md);">
+                {% for act in recent_activity %}
+                <div class="activity-item" style="position: relative; display: flex; flex-direction: column; gap: 4px;">
+                    <!-- Timeline dot -->
+                    <div style="position: absolute; left: -31px; top: 4px; width: 12px; height: 12px; border-radius: var(--radius-full); border: 2px solid var(--color-primary); background: var(--bg-card); z-index: 2;"></div>
+                    
+                    <div class="flex flex-between" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                        <span style="font-size: 0.92rem; font-weight: 500; color: var(--text-primary);">
+                            {{ act.description }}
+                        </span>
+                        <span class="text-muted" style="font-size: 0.75rem;">
+                            {{ act.created_at|time_since_short }} ago
+                        </span>
+                    </div>
+                    {% if act.group %}
+                    <span style="font-size: 0.78rem; color: var(--color-accent); font-weight: 600;">
+                        📁 {{ act.group.name }}
+                    </span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state" style="text-align: center; padding: var(--space-xl) var(--space-md); color: var(--text-secondary);">
+                <div style="font-size: 2.5rem; margin-bottom: var(--space-sm);">✨</div>
+                <h4>All clear! No recent activity.</h4>
+                <p style="font-size: 0.85rem; margin-top: 4px;">Shared expenses or payments will show up here.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Right Column: Groups and Friends -->
+    <div style="display: flex; flex-direction: column; gap: var(--space-xl);">
+        <!-- Your Groups -->
+        <div class="card card-glass">
+            <div class="card-header">
+                <h2>📁 Groups</h2>
+                <a href="{% url 'group_list' %}" class="btn btn-ghost btn-sm">All Groups</a>
+            </div>
+            <div class="card-body" style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                {% if groups %}
+                    {% for gp in groups %}
+                    <a href="{% url 'group_detail' gp.id %}" class="list-item" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--border-color); background: rgba(255,255,255,0.02); text-decoration: none; color: inherit; transition: all var(--transition-fast);">
+                        <div class="flex items-center gap-sm" style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <span style="font-size: 1.3rem;">{{ gp.get_type_display_icon }}</span>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">{{ gp.name }}</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">{{ gp.memberships.count }} members</div>
+                            </div>
+                        </div>
+                        <span style="font-size: 0.85rem; font-weight: 600;">➡️</span>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state" style="text-align: center; padding: var(--space-md); color: var(--text-secondary);">
+                        <p style="font-size: 0.82rem;">No groups yet.</p>
+                        <a href="{% url 'create_group' %}" class="btn btn-ghost btn-sm text-primary" style="margin-top: 4px; padding: 2px 8px;">Create Group</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Friends Balances -->
+        <div class="card card-glass">
+            <div class="card-header">
+                <h2>👥 Friends</h2>
+                <a href="{% url 'friends_list' %}" class="btn btn-ghost btn-sm">All Friends</a>
+            </div>
+            <div class="card-body" style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                {% if friend_balances %}
+                    {% for fb in friend_balances %}
+                    <a href="{% url 'friend_detail' fb.user.id %}" class="list-item" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--border-color); background: rgba(255,255,255,0.02); text-decoration: none; color: inherit; transition: all var(--transition-fast);">
+                        <div class="flex items-center gap-sm" style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <div class="avatar avatar-sm" style="background-color: {{ fb.user|avatar_color }}; color: #0f1117; font-weight: 700;">
+                                {{ fb.user|initials }}
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.9rem;">{{ fb.user.get_full_name|default:fb.user.username }}</div>
+                                <div class="text-muted" style="font-size: 0.72rem;">
+                                    {% if fb.balance > 0 %}
+                                    owes you
+                                    {% else %}
+                                    you owe
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <span class="{% if fb.balance > 0 %}text-positive{% else %}text-negative{% endif %}" style="font-size: 0.85rem; font-weight: 600;">
+                            {{ fb.balance|abs_value|currency }}
+                        </span>
+                    </a>
+                    {% endfor %}
+                {% else %}
+                    <div class="empty-state" style="text-align: center; padding: var(--space-md); color: var(--text-secondary);">
+                        <p style="font-size: 0.82rem;">All settled up with friends!</p>
+                        <a href="{% url 'add_friend' %}" class="btn btn-ghost btn-sm text-primary" style="margin-top: 4px; padding: 2px 8px;">Add Friend</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

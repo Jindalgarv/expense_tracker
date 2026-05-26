@@ -1,133 +1,157 @@
+{% load static %}
+{% load splitwise_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Expense Tracker</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+    <title>{% block title %}SplitLite{% endblock %} | SplitLite</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'tracker/css/style.css' %}">
 </head>
-    <nav class="navbar navbar-expand-lg navbar-light bg-light">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="{% url 'expense_list' %}">Expense Tracker</a>
-            <div class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    {% if user.is_authenticated %}
-                        <li class="nav-item"><a class="nav-link" href="{% url 'expense_list' %}">Expenses</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{% url 'add_expense' %}">Add Expense</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{% url 'monthly_report' %}">Monthly Report</a></li>
-                        <li class="nav-item">
-                            <form method="POST" action="{% url 'logout' %}" style="display: inline;">
-                            {% csrf_token %}
-                            <button type="submit" class="btn btn-link nav-link" style="border: none; background: none; cursor: pointer;">
-                                Logout
-                            </button>
-                            </form>
-                        </li>
-                    {% else %}
-                        <li class="nav-item"><a class="nav-link" href="{% url 'login' %}">Login</a></li>
-                        <li class="nav-item"><a class="nav-link" href="{% url 'signup' %}">Sign Up</a></li>
+<body>
+    <div class="app-layout">
+        <!-- Sidebar overlay for mobile -->
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <!-- Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <a href="{% url 'dashboard' %}" class="sidebar-logo">
+                <div class="logo-icon">💸</div>
+                <span class="logo-text">SplitLite</span>
+            </a>
+            
+            <nav class="sidebar-nav">
+                <div class="sidebar-section-label">General</div>
+                <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                    <span class="nav-icon">🏠</span> Dashboard
+                </a>
+                <a href="{% url 'friends_list' %}" class="nav-link {% if 'friend' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="nav-icon">👥</span> Friends
+                    {% if pending_requests_count %}
+                    <span class="nav-badge">{{ pending_requests_count }}</span>
                     {% endif %}
-                </ul>
+                </a>
+                <a href="{% url 'group_list' %}" class="nav-link {% if 'group' in request.resolver_match.url_name %}active{% endif %}">
+                    <span class="nav-icon">📁</span> Groups
+                </a>
+                <a href="{% url 'expense_list' %}" class="nav-link {% if request.resolver_match.url_name == 'expense_list' %}active{% endif %}">
+                    <span class="nav-icon">💰</span> Expenses
+                </a>
+
+                <div class="sidebar-divider"></div>
+                <div class="sidebar-section-label">Analytics & Feed</div>
+                <a href="{% url 'activity_feed' %}" class="nav-link {% if request.resolver_match.url_name == 'activity_feed' %}active{% endif %}">
+                    <span class="nav-icon">📋</span> Activity Feed
+                </a>
+                <a href="{% url 'monthly_report' %}" class="nav-link {% if request.resolver_match.url_name == 'monthly_report' %}active{% endif %}">
+                    <span class="nav-icon">📊</span> Reports
+                </a>
+
+                <div class="sidebar-divider"></div>
+                <a href="{% url 'settle_up' %}" class="nav-link {% if request.resolver_match.url_name == 'settle_up' %}active{% endif %}" style="background: rgba(29, 209, 161, 0.1); border-left-color: var(--color-primary); color: var(--color-primary);">
+                    <span class="nav-icon">🤝</span> Settle Up
+                </a>
+            </nav>
+
+            {% if user.is_authenticated %}
+            <div class="sidebar-user">
+                <div class="avatar avatar-sm" style="background-color: {{ user|avatar_color }}; color: #0f1117; font-weight: 700;">
+                    {{ user|initials }}
+                </div>
+                <div class="user-info">
+                    <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
+                    <div class="user-email">{{ user.email|default:"No email set" }}</div>
+                </div>
+                <a href="{% url 'profile' %}" class="logout-btn" title="Profile Settings" style="margin-right: 6px;">⚙️</a>
+                <form method="POST" action="{% url 'logout' %}" style="display: inline-block;">
+                    {% csrf_token %}
+                    <button type="submit" class="logout-btn" title="Logout" style="background: none; border: none; cursor: pointer; font-size: 1rem;">
+                        🚪
+                    </button>
+                </form>
             </div>
-        </div>
-    </nav>
-    {% if messages %}
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // Automatically remove messages after a few seconds
-        const messages = document.querySelectorAll('.message-item');
-        messages.forEach((message) => {
-            setTimeout(() => {
-                message.style.display = 'none';
-            }, 4000); // Adjust time as needed (4000ms = 4 seconds)
-        });
-    });
-</script>
-<style>
-/* Center the messages container */
-.messages-container {
-    position: fixed;
-    top: 10%; /* Center vertically */
-    left: 50%; /* Center horizontally */
-    transform: translate(-50%, -50%); /* Adjust for center alignment */
-    z-index: 1000; /* Ensure it appears above other elements */
-    width: 80%; /* Adjust width as needed */
-    max-width: 400px; /* Set a maximum width for large screens */
-    text-align: center; /* Center-align text */
-}
+            {% endif %}
+            <div style="text-align: center; padding: var(--space-sm); font-size: 0.72rem; color: var(--text-disabled); border-top: 1px solid var(--border-color); flex-shrink: 0; background: rgba(0,0,0,0.1); margin-top: auto;">
+                Made with ❤️ by Garv Jindal
+            </div>
+        </aside>
 
-/* Messages List */
-.messages {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Mobile Menu Toggle Button -->
+            <button class="hamburger-btn mobile-only" id="hamburgerBtn" onclick="toggleSidebar()">
+                ☰
+            </button>
 
-/* Individual Message Item */
-.message-item {
-    margin: 10px auto;
-    padding: 15px 20px;
-    border-radius: 8px;
-    color: #fff;
-    font-family: Arial, sans-serif;
-    font-size: 16px;
-    opacity: 0; /* Hidden by default */
-    animation: fadeInOut 4s ease-in-out;
-    display: inline-block; /* Ensures messages stay centered */
-}
+            <!-- Top Header Bar -->
+            <div class="flex flex-between items-center mb-4 desktop-only" style="border-bottom: 1px solid var(--border-color); padding-bottom: var(--space-md); margin-top: -10px;">
+                <div>
+                    <span class="text-muted" style="font-size: 0.85rem;">SplitLite App</span>
+                </div>
+                <div class="flex items-center gap-md" style="display: flex; align-items: center; gap: var(--space-md);">
+                    <a href="{% url 'notifications' %}" class="btn btn-icon btn-ghost" id="notificationBell" style="position: relative; font-size: 1.15rem;">
+                        🔔
+                        {% if unread_notifications_count %}
+                        <span class="badge badge-negative" style="position: absolute; top: -2px; right: -2px; padding: 2px 5px; font-size: 0.6rem; min-width: 15px; border-radius: var(--radius-full);">
+                            {{ unread_notifications_count }}
+                        </span>
+                        {% endif %}
+                    </a>
+                    
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'profile' %}" class="flex items-center gap-sm" style="display: flex; align-items: center; gap: var(--space-xs); text-decoration: none; color: var(--text-primary);">
+                        <div class="avatar avatar-sm" style="background-color: {{ user|avatar_color }}; color: #0f1117; font-weight: 700;">
+                            {{ user|initials }}
+                        </div>
+                        <span style="font-size: 0.85rem; font-weight: 500;">{{ user.username }}</span>
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
 
-/* Success Message */
-.message-item.success {
-    background-color: #28a745;
-}
+            <!-- Messages toast/notification container -->
+            {% if messages %}
+            <div class="messages-container" style="position: fixed; top: var(--space-lg); right: var(--space-lg); z-index: var(--z-toast); display: flex; flex-direction: column; gap: var(--space-sm); pointer-events: none;">
+                {% for message in messages %}
+                <div class="message-item {% if message.tags %}{{ message.tags }}{% else %}info{% endif %}" style="pointer-events: auto; padding: var(--space-md) var(--space-lg); border-radius: var(--radius-lg); color: #fff; font-weight: 500; font-size: 0.9rem; box-shadow: var(--shadow-md); animation: fadeIn 0.3s ease-out;">
+                    {% if message.tags == 'success' %}
+                    🟢
+                    {% elif message.tags == 'error' or message.tags == 'danger' %}
+                    🔴
+                    {% elif message.tags == 'warning' %}
+                    🟡
+                    {% else %}
+                    🔵
+                    {% endif %}
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
 
-/* Error Message */
-.message-item.error {
-    background-color: #dc3545;
-}
-
-/* Warning Message */
-.message-item.warning {
-    background-color: #ffc107;
-    color: #000;
-}
-
-/* Info Message */
-.message-item.info {
-    background-color: #17a2b8;
-}
-
-/* Fade-in and Fade-out Animation */
-@keyframes fadeInOut {
-    0% {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-    10%, 90% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    100% {
-        opacity: 0;
-        transform: scale(0.9);
-    }
-}
-</style>
-<div class="messages-container">
-    <ul class="messages">
-        {% for message in messages %}
-        <li class="message-item {{ message.tags }}">{{ message }}</li>
-        {% endfor %}
-    </ul>
-</div>
-{% endif %}
-
-    
-
-    <div class="container mt-4">
-        {% block content %}
-        <!-- Page-specific content will be inserted here -->
-        {% endblock %}
+            <!-- Main Page Content Block -->
+            <div class="page-content animate-fade-in">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
     </div>
+    
+    <script src="{% static 'tracker/js/app.js' %}"></script>
+    <script>
+        // Custom interactive script logic (if any)
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            if (sidebar.classList.contains('sidebar-open')) {
+                sidebar.classList.remove('sidebar-open');
+                overlay.classList.remove('active');
+            } else {
+                sidebar.classList.add('sidebar-open');
+                overlay.classList.add('active');
+            }
+        }
+    </script>
 </body>
 </html>

@@ -1,1 +1,1 @@
-web: expense_tracker.wsgi
+web: python manage.py migrate && python manage.py seed_categories && gunicorn expense_tracker.wsgi --bind 0.0.0.0:$PORT --log-file -

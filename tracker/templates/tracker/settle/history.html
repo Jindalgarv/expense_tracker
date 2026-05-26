@@ -1,0 +1,73 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Settlement History{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>🤝 Settlement History</h1>
+        <div class="page-subtitle">A record of all payments made or received between you and your friends.</div>
+    </div>
+    <div>
+        <a href="{% url 'settle_up' %}" class="btn btn-primary">
+            🤝 Settle Up
+        </a>
+    </div>
+</div>
+
+<!-- History Card -->
+<div class="card card-glass animate-slide-up" style="max-width: 800px; margin: 0 auto;">
+    <div class="card-body" style="padding: 0;">
+        {% if settlements %}
+            <div style="display: flex; flex-direction: column;">
+                {% for stl in settlements %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-color); {% if stl.from_user == user %}background: rgba(29, 209, 161, 0.01);{% else %}background: rgba(10, 189, 227, 0.01);{% endif %} transition: background var(--transition-fast);">
+                    
+                    <div style="display: flex; align-items: center; gap: var(--space-md);">
+                        <span style="font-size: 1.5rem;">
+                            {% if stl.from_user == user %}
+                            📤
+                            {% else %}
+                            📥
+                            {% endif %}
+                        </span>
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary);">
+                                {% if stl.from_user == user %}
+                                You paid <strong>{{ stl.to_user.get_full_name|default:stl.to_user.username }}</strong>
+                                {% else %}
+                                <strong>{{ stl.from_user.get_full_name|default:stl.from_user.username }}</strong> paid you
+                                {% endif %}
+                            </div>
+                            <div class="text-muted" style="font-size: 0.75rem; margin-top: 2px;">
+                                {{ stl.date|date:"M d, Y" }}
+                                {% if stl.group %} in 📁 <strong>{{ stl.group.name }}</strong>{% endif %}
+                            </div>
+                            {% if stl.notes %}
+                            <div style="font-size: 0.78rem; font-style: italic; color: var(--text-secondary); margin-top: 4px;">
+                                "{{ stl.notes }}"
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="{% if stl.from_user == user %}text-positive{% else %}text-negative{% endif %}" style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.1rem; color: {% if stl.from_user == user %}var(--color-positive){% else %}var(--color-accent){% endif %};">
+                        {{ stl.amount|currency }}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state" style="text-align: center; padding: var(--space-2xl) var(--space-xl); color: var(--text-secondary);">
+                <div style="font-size: 3rem; margin-bottom: var(--space-md);">🤝</div>
+                <h3>No settlements recorded yet</h3>
+                <p style="font-size: 0.9rem; margin-top: 4px;">Clear your balances and record payments when you settle up with friends.</p>
+                <a href="{% url 'settle_up' %}" class="btn btn-primary btn-sm" style="margin-top: var(--space-md);">
+                    🤝 Settle Up Now
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Groups{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>📁 Groups</h1>
+        <div class="page-subtitle">Collaborative expense-sharing groups for trips, households, and more.</div>
+    </div>
+    <div>
+        <a href="{% url 'create_group' %}" class="btn btn-primary">
+            📁 Create Group
+        </a>
+    </div>
+</div>
+
+<!-- Groups Grid -->
+<div class="animate-slide-up" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-md); max-width: 1000px; margin: 0 auto;">
+    {% if group_data %}
+        {% for gd in group_data %}
+        <a href="{% url 'group_detail' gd.group.id %}" class="card card-glass" style="display: flex; flex-direction: column; justify-content: space-between; text-decoration: none; color: inherit; height: 100%; transition: all var(--transition-fast); padding: var(--space-md) var(--space-lg);">
+            <div>
+                <div class="flex flex-between items-center" style="display: flex; justify-content: space-between; align-items: flex-start;">
+                    <!-- Group Type Icon -->
+                    <span style="font-size: 2.2rem; margin-bottom: var(--space-xs); display: block;">
+                        {{ gd.group.get_type_display_icon }}
+                    </span>
+                    <!-- Number of members badge -->
+                    <span class="badge" style="font-size: 0.7rem; padding: 2px 8px; border-radius: var(--radius-full); background: rgba(255,255,255,0.04); border: 1px solid var(--border-color);">
+                        {{ gd.member_count }} members
+                    </span>
+                </div>
+                
+                <h3 style="font-size: 1.15rem; font-weight: 700; margin-top: var(--space-sm); margin-bottom: 2px; text-overflow: ellipsis; overflow: hidden; white-space: nowrap; color: var(--text-primary);">
+                    {{ gd.group.name }}
+                </h3>
+                <p class="text-muted" style="font-size: 0.8rem; line-height: 1.3; text-overflow: ellipsis; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; min-height: 2.1rem; margin-top: 4px;">
+                    {{ gd.group.description|default:"No description provided" }}
+                </p>
+            </div>
+
+            <div class="sidebar-divider" style="margin: var(--space-sm) 0;"></div>
+
+            <div class="flex flex-between items-center" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <span class="text-muted" style="font-size: 0.72rem; text-transform: uppercase; font-weight: 500;">
+                    Your balance
+                </span>
+                <span class="{% if gd.balance > 0 %}text-positive{% elif gd.balance < 0 %}text-negative{% else %}text-muted{% endif %}" style="font-weight: 700; font-size: 0.95rem;">
+                    {% if gd.balance > 0 %}
+                    +{{ gd.balance|currency }}
+                    {% elif gd.balance < 0 %}
+                    -{{ gd.balance|abs_value|currency }}
+                    {% else %}
+                    ₹0.00
+                    {% endif %}
+                </span>
+            </div>
+        </a>
+        {% endfor %}
+    {% else %}
+        <div class="card card-glass" style="grid-column: 1 / -1; text-align: center; padding: var(--space-2xl) var(--space-xl); color: var(--text-secondary);">
+            <div style="font-size: 3.5rem; margin-bottom: var(--space-md);">📁</div>
+            <h3>No groups created yet</h3>
+            <p style="font-size: 0.9rem; margin-top: 4px; max-width: 400px; margin-left: auto; margin-right: auto;">
+                Groups are perfect for keeping track of shared household expenses, trips with friends, or couple budgets.
+            </p>
+            <a href="{% url 'create_group' %}" class="btn btn-primary" style="margin-top: var(--space-md);">
+                📁 Create your first group
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

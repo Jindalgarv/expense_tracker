@@ -1,0 +1,65 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Activity Feed{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>📋 Activity Feed</h1>
+        <div class="page-subtitle">A chronological timeline of all group updates, expense entries, and payments.</div>
+    </div>
+</div>
+
+<div class="card card-glass animate-slide-up" style="max-width: 800px; margin: 0 auto; padding: var(--space-xl);">
+    <div class="card-body">
+        {% if activities %}
+            <div class="activity-timeline" style="position: relative; padding-left: 28px; border-left: 2px solid var(--border-color); display: flex; flex-direction: column; gap: var(--space-lg);">
+                {% for act in activities %}
+                <div class="activity-item" style="position: relative; display: flex; flex-direction: column; gap: 4px;">
+                    <!-- Timeline Dot -->
+                    <div style="position: absolute; left: -35px; top: 4px; width: 12px; height: 12px; border-radius: var(--radius-full); border: 2px solid var(--color-primary); background: var(--bg-card); z-index: 2;"></div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-md); flex-wrap: wrap;">
+                        <div style="display: flex; align-items: flex-start; gap: var(--space-sm); flex: 1; min-width: 0;">
+                            <!-- Activity User initials -->
+                            <div class="avatar avatar-sm" style="background-color: {{ act.user|avatar_color }}; color: #0f1117; font-weight: 700; width: 28px; height: 28px; font-size: 0.65rem; flex-shrink: 0;">
+                                {{ act.user|initials }}
+                            </div>
+                            
+                            <div style="font-size: 0.92rem; color: var(--text-primary); line-height: 1.4;">
+                                {{ act.description }}
+                            </div>
+                        </div>
+
+                        <span class="text-muted" style="font-size: 0.75rem; white-space: nowrap;">
+                            {{ act.created_at|time_since_short }} ago
+                        </span>
+                    </div>
+
+                    <div class="flex gap-sm" style="display: flex; gap: var(--space-sm); font-size: 0.78rem; margin-left: 36px; margin-top: 2px;">
+                        {% if act.group %}
+                        <span style="color: var(--color-accent); font-weight: 600;">
+                            📁 {{ act.group.name }}
+                        </span>
+                        {% endif %}
+                        
+                        {% if act.expense %}
+                        <a href="{% url 'expense_detail' act.expense.id %}" style="color: var(--color-primary); font-weight: 500; text-decoration: none;">
+                            💵 View Expense
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state" style="text-align: center; padding: var(--space-2xl) var(--space-xl); color: var(--text-secondary);">
+                <div style="font-size: 3rem; margin-bottom: var(--space-md);">📋</div>
+                <h3>Feed is quiet</h3>
+                <p style="font-size: 0.9rem; margin-top: 4px;">Shared activity inside your groups and friendships will show up here.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,94 +1,949 @@
-from calendar import month
 from django.shortcuts import render, redirect, get_object_or_404
-from .models import Expense, Category, Notification
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth import login
-from django.db.models import Q, Sum
-from django.utils.timezone import now
-import csv
-from django.http import HttpResponse
-from .utils import create_notification
-from django.core.mail import send_mail
-from django.http import HttpResponse
-
-from io import StringIO
-import csv
-from django.http import HttpResponse
-from .models import Expense
+from django.contrib.auth import login as auth_login
+from django.contrib.auth.models import User
 from django.contrib import messages
-from .forms import UserRegisterForm
+from django.db.models import Q, Sum
+from django.http import HttpResponse
+from django.utils.timezone import now
+from decimal import Decimal
+import csv
+from io import StringIO
+
+from .models import (
+    UserProfile, Category, Friendship, Group, GroupMembership,
+    Expense, ExpenseSplit, Settlement, Activity, Notification
+)
+from .forms import UserRegisterForm, UserProfileForm, GroupForm, ExpenseForm, SettlementForm
+from .services import (
+    create_expense_splits, get_balance_between, get_user_total_balance,
+    get_group_balances, simplify_debts, get_friends, get_pending_friend_requests,
+    log_activity, create_notification
+)
 
 
+# ─────────────────────────────────────────────
+# Dashboard
+# ─────────────────────────────────────────────
+
+@login_required
+def dashboard(request):
+    """Main dashboard showing balance summary, recent activity, groups."""
+    balance_data = get_user_total_balance(request.user)
+    groups = Group.objects.filter(memberships__user=request.user).order_by('-updated_at')[:6]
+    recent_activity = Activity.objects.filter(
+        Q(user=request.user) |
+        Q(group__memberships__user=request.user)
+    ).distinct().order_by('-created_at')[:10]
+    friends = get_friends(request.user)
+    pending_requests = get_pending_friend_requests(request.user)
+
+    # Build friend balances for dashboard
+    friend_balances = []
+    for friend in friends:
+        balance = get_balance_between(request.user, friend)
+        if balance != Decimal('0.00'):
+            friend_balances.append({'user': friend, 'balance': balance})
+    friend_balances.sort(key=lambda x: abs(x['balance']), reverse=True)
+
+    context = {
+        'balance_data': balance_data,
+        'groups': groups,
+        'recent_activity': recent_activity,
+        'friend_balances': friend_balances[:5],
+        'pending_requests': pending_requests,
+        'total_friends': len(friends),
+        'total_groups': Group.objects.filter(memberships__user=request.user).count(),
+    }
+    return render(request, 'tracker/dashboard.html', context)
+
+
+# ─────────────────────────────────────────────
+# Friends
+# ─────────────────────────────────────────────
+
+@login_required
+def friends_list(request):
+    """Show all friends with balances."""
+    friends = get_friends(request.user)
+    pending_requests = get_pending_friend_requests(request.user)
+    sent_requests = Friendship.objects.filter(from_user=request.user, status='pending')
+
+    friend_data = []
+    for friend in friends:
+        balance = get_balance_between(request.user, friend)
+        friend_data.append({'user': friend, 'balance': balance})
+
+    context = {
+        'friend_data': friend_data,
+        'pending_requests': pending_requests,
+        'sent_requests': sent_requests,
+    }
+    return render(request, 'tracker/friends/list.html', context)
+
+
+@login_required
+def add_friend(request):
+    """Search and add friends by username or email."""
+    results = []
+    query = ''
+    if request.method == 'POST':
+        query = request.POST.get('query', '').strip()
+        if query:
+            # Find users matching query (exclude self and existing friends)
+            existing_friend_ids = [f.id for f in get_friends(request.user)]
+            pending_ids = list(Friendship.objects.filter(
+                from_user=request.user, status='pending'
+            ).values_list('to_user_id', flat=True))
+            exclude_ids = existing_friend_ids + pending_ids + [request.user.id]
+
+            results = User.objects.filter(
+                Q(username__icontains=query) |
+                Q(email__icontains=query) |
+                Q(first_name__icontains=query) |
+                Q(last_name__icontains=query)
+            ).exclude(id__in=exclude_ids)[:10]
+
+    return render(request, 'tracker/friends/add.html', {'results': results, 'query': query})
+
+
+@login_required
+def send_friend_request(request, user_id):
+    """Send a friend request to a user."""
+    to_user = get_object_or_404(User, id=user_id)
+    if to_user == request.user:
+        messages.error(request, "You can't add yourself as a friend!")
+        return redirect('friends_list')
+
+    # Check if friendship already exists in either direction
+    existing = Friendship.objects.filter(
+        Q(from_user=request.user, to_user=to_user) |
+        Q(from_user=to_user, to_user=request.user)
+    ).first()
+
+    if existing:
+        if existing.status == 'accepted':
+            messages.info(request, f"You're already friends with {to_user.get_full_name() or to_user.username}!")
+        elif existing.status == 'pending':
+            messages.info(request, "Friend request already pending!")
+        elif existing.status == 'rejected':
+            existing.status = 'pending'
+            existing.save()
+            messages.success(request, f"Friend request re-sent to {to_user.get_full_name() or to_user.username}!")
+    else:
+        Friendship.objects.create(from_user=request.user, to_user=to_user, status='pending')
+        create_notification(
+            to_user,
+            f"{request.user.get_full_name() or request.user.username} sent you a friend request!",
+            notification_type='friend_request',
+            link='/friends/'
+        )
+        messages.success(request, f"Friend request sent to {to_user.get_full_name() or to_user.username}!")
+
+    return redirect('friends_list')
+
+
+@login_required
+def accept_friend(request, friendship_id):
+    """Accept a friend request."""
+    friendship = get_object_or_404(Friendship, id=friendship_id, to_user=request.user, status='pending')
+    friendship.status = 'accepted'
+    friendship.save()
+    log_activity(request.user, 'friend_added',
+                 f"{request.user.get_full_name() or request.user.username} and {friendship.from_user.get_full_name() or friendship.from_user.username} are now friends!")
+    create_notification(
+        friendship.from_user,
+        f"{request.user.get_full_name() or request.user.username} accepted your friend request!",
+        notification_type='friend_request',
+        link='/friends/'
+    )
+    messages.success(request, f"You are now friends with {friendship.from_user.get_full_name() or friendship.from_user.username}!")
+    return redirect('friends_list')
+
+
+@login_required
+def reject_friend(request, friendship_id):
+    """Reject a friend request."""
+    friendship = get_object_or_404(Friendship, id=friendship_id, to_user=request.user, status='pending')
+    friendship.status = 'rejected'
+    friendship.save()
+    messages.info(request, "Friend request declined.")
+    return redirect('friends_list')
+
+
+@login_required
+def friend_detail(request, user_id):
+    """Show expenses and balance with a specific friend."""
+    friend = get_object_or_404(User, id=user_id)
+    balance = get_balance_between(request.user, friend)
+
+    # Get shared expenses (where both users have splits, or one paid and the other has a split)
+    shared_expenses = Expense.objects.filter(
+        Q(paid_by=request.user, splits__user=friend) |
+        Q(paid_by=friend, splits__user=request.user)
+    ).distinct().order_by('-date')[:20]
+
+    # Get settlements between the two
+    settlements = Settlement.objects.filter(
+        Q(from_user=request.user, to_user=friend) |
+        Q(from_user=friend, to_user=request.user)
+    ).order_by('-date')[:10]
+
+    context = {
+        'friend': friend,
+        'balance': balance,
+        'shared_expenses': shared_expenses,
+        'settlements': settlements,
+    }
+    return render(request, 'tracker/friends/detail.html', context)
+
+
+# ─────────────────────────────────────────────
+# Groups
+# ─────────────────────────────────────────────
+
+@login_required
+def group_list(request):
+    """Show all groups the user belongs to."""
+    groups = Group.objects.filter(memberships__user=request.user).order_by('-updated_at')
+    group_data = []
+    for group in groups:
+        member_count = group.memberships.count()
+        balance = Decimal('0.00')
+        # Calculate user's net balance in this group
+        members = [m.user for m in group.memberships.exclude(user=request.user)]
+        for member in members:
+            balance += get_balance_between(request.user, member, group=group)
+        group_data.append({
+            'group': group,
+            'member_count': member_count,
+            'balance': balance,
+        })
+    return render(request, 'tracker/groups/list.html', {'group_data': group_data})
+
+
+@login_required
+def create_group(request):
+    """Create a new group."""
+    friends = get_friends(request.user)
+    if request.method == 'POST':
+        form = GroupForm(request.POST)
+        if form.is_valid():
+            group = form.save(commit=False)
+            group.created_by = request.user
+            group.save()
+            # Add creator as admin
+            GroupMembership.objects.create(group=group, user=request.user, role='admin')
+            # Add selected members
+            member_ids = request.POST.getlist('members')
+            for member_id in member_ids:
+                try:
+                    user = User.objects.get(id=member_id)
+                    GroupMembership.objects.create(group=group, user=user, role='member')
+                    create_notification(
+                        user,
+                        f"{request.user.get_full_name() or request.user.username} added you to \"{group.name}\"",
+                        notification_type='group',
+                        link=f'/groups/{group.id}/'
+                    )
+                except User.DoesNotExist:
+                    pass
+            log_activity(request.user, 'group_created', f'Created group "{group.name}"', group=group)
+            messages.success(request, f'Group "{group.name}" created!')
+            return redirect('group_detail', group_id=group.id)
+    else:
+        form = GroupForm()
+    return render(request, 'tracker/groups/create.html', {'form': form, 'friends': friends})
+
+
+@login_required
+def group_detail(request, group_id):
+    """View a group's expenses, members, and balances."""
+    group = get_object_or_404(Group, id=group_id)
+    # Verify membership
+    if not group.memberships.filter(user=request.user).exists():
+        messages.error(request, "You're not a member of this group.")
+        return redirect('group_list')
+
+    expenses = group.expenses.all().order_by('-date')[:20]
+    members = group.memberships.select_related('user', 'user__profile').all()
+    settlements = group.settlements.all().order_by('-date')[:5]
+
+    # Calculate user's balance in this group
+    user_balance = Decimal('0.00')
+    for membership in members:
+        if membership.user != request.user:
+            user_balance += get_balance_between(request.user, membership.user, group=group)
+
+    context = {
+        'group': group,
+        'expenses': expenses,
+        'members': members,
+        'settlements': settlements,
+        'user_balance': user_balance,
+        'is_admin': group.memberships.filter(user=request.user, role='admin').exists(),
+    }
+    return render(request, 'tracker/groups/detail.html', context)
+
+
+@login_required
+def edit_group(request, group_id):
+    """Edit group settings."""
+    group = get_object_or_404(Group, id=group_id)
+    if not group.memberships.filter(user=request.user, role='admin').exists():
+        messages.error(request, "Only group admins can edit the group.")
+        return redirect('group_detail', group_id=group.id)
+
+    if request.method == 'POST':
+        form = GroupForm(request.POST, instance=group)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Group updated!')
+            return redirect('group_detail', group_id=group.id)
+    else:
+        form = GroupForm(instance=group)
+    return render(request, 'tracker/groups/edit.html', {'form': form, 'group': group})
+
+
+@login_required
+def delete_group(request, group_id):
+    """Delete a group."""
+    group = get_object_or_404(Group, id=group_id)
+    if not group.memberships.filter(user=request.user, role='admin').exists():
+        messages.error(request, "Only group admins can delete the group.")
+        return redirect('group_detail', group_id=group.id)
+
+    if request.method == 'POST':
+        group_name = group.name
+        group.delete()
+        messages.success(request, f'Group "{group_name}" deleted.')
+        return redirect('group_list')
+    return render(request, 'tracker/groups/delete.html', {'group': group})
+
+
+@login_required
+def add_group_member(request, group_id):
+    """Add a friend to a group."""
+    group = get_object_or_404(Group, id=group_id)
+    if not group.memberships.filter(user=request.user).exists():
+        messages.error(request, "You're not a member of this group.")
+        return redirect('group_list')
+
+    if request.method == 'POST':
+        user_id = request.POST.get('user_id')
+        try:
+            user = User.objects.get(id=user_id)
+            if not group.memberships.filter(user=user).exists():
+                GroupMembership.objects.create(group=group, user=user, role='member')
+                log_activity(request.user, 'member_added',
+                             f"{request.user.get_full_name() or request.user.username} added {user.get_full_name() or user.username} to \"{group.name}\"",
+                             group=group)
+                create_notification(
+                    user,
+                    f"{request.user.get_full_name() or request.user.username} added you to \"{group.name}\"",
+                    notification_type='group',
+                    link=f'/groups/{group.id}/'
+                )
+                messages.success(request, f'{user.get_full_name() or user.username} added to the group!')
+            else:
+                messages.info(request, 'User is already a member.')
+        except User.DoesNotExist:
+            messages.error(request, 'User not found.')
+
+    # Get friends not in the group
+    friends = get_friends(request.user)
+    current_member_ids = group.memberships.values_list('user_id', flat=True)
+    available_friends = [f for f in friends if f.id not in current_member_ids]
+
+    return render(request, 'tracker/groups/add_member.html', {
+        'group': group,
+        'available_friends': available_friends,
+    })
+
+
+@login_required
+def remove_group_member(request, group_id, user_id):
+    """Remove a member from a group."""
+    group = get_object_or_404(Group, id=group_id)
+    if not group.memberships.filter(user=request.user, role='admin').exists():
+        messages.error(request, "Only group admins can remove members.")
+        return redirect('group_detail', group_id=group.id)
+
+    if request.method == 'POST':
+        membership = get_object_or_404(GroupMembership, group=group, user_id=user_id)
+        if membership.user == group.created_by:
+            messages.error(request, "Cannot remove the group creator.")
+        else:
+            user_name = membership.user.get_full_name() or membership.user.username
+            membership.delete()
+            log_activity(request.user, 'member_removed',
+                         f"{user_name} was removed from \"{group.name}\"", group=group)
+            messages.success(request, f'{user_name} removed from the group.')
+    return redirect('group_detail', group_id=group.id)
+
+
+@login_required
+def group_balances(request, group_id):
+    """View detailed balances within a group."""
+    group = get_object_or_404(Group, id=group_id)
+    if not group.memberships.filter(user=request.user).exists():
+        messages.error(request, "You're not a member of this group.")
+        return redirect('group_list')
+
+    balances = get_group_balances(group)
+    simplified = simplify_debts(group) if group.simplify_debts else []
+    members = [m.user for m in group.memberships.select_related('user').all()]
+
+    # Build balance details for each member
+    member_balances = []
+    for member in members:
+        net = Decimal('0.00')
+        for other in members:
+            if member != other:
+                net += get_balance_between(member, other, group=group)
+        member_balances.append({'user': member, 'net_balance': net})
+
+    context = {
+        'group': group,
+        'balances': balances,
+        'simplified': simplified,
+        'member_balances': member_balances,
+    }
+    return render(request, 'tracker/groups/balances.html', context)
+
+
+# ─────────────────────────────────────────────
+# Expenses
+# ─────────────────────────────────────────────
 
 @login_required
 def expense_list(request):
-    expenses = Expense.objects.filter(user=request.user)
+    """List all expenses the user is involved in."""
+    expenses = Expense.objects.filter(
+        Q(paid_by=request.user) | Q(splits__user=request.user)
+    ).distinct().order_by('-date')
 
+    # Filters
     category_id = request.GET.get('category')
-    start_date = request.GET.get('start_date')
-    end_date = request.GET.get('end_date')
-
+    group_id = request.GET.get('group')
     if category_id:
         expenses = expenses.filter(category_id=category_id)
-
-    if start_date and end_date:
-        expenses = expenses.filter(date__range=[start_date, end_date])
+    if group_id:
+        expenses = expenses.filter(group_id=group_id)
 
     categories = Category.objects.all()
-    return render(request, 'tracker/expense_list.html', {'expenses': expenses,'categories': categories,'selected category': category_id, 'start_date': start_date, 'end_date': end_date})
+    groups = Group.objects.filter(memberships__user=request.user)
+
+    context = {
+        'expenses': expenses[:50],
+        'categories': categories,
+        'groups': groups,
+        'selected_category': category_id,
+        'selected_group': group_id,
+    }
+    return render(request, 'tracker/expenses/list.html', context)
+
 
 @login_required
 def add_expense(request):
-    if request.method == 'POST':
-        title = request.POST['title']
-        amount = request.POST['amount']
-        date = request.POST['date']
-        category =  Category.objects.get(id=request.POST['category'])
+    """Add a new expense with splits."""
+    group_id = request.GET.get('group')
+    group = None
+    if group_id:
+        group = get_object_or_404(Group, id=group_id)
+        if not group.memberships.filter(user=request.user).exists():
+            messages.error(request, "You're not a member of this group.")
+            return redirect('group_list')
 
-        Expense.objects.create(
-            title=title,
-            amount=amount,
-            date=date,
-            category=category,
-            user=request.user
-        )
-        create_notification(request.user, f'Bhai Naya kharaacha daala hai {title} pe {amount} rupaye ka')
-        return redirect('expense_list')
-    
+    if request.method == 'POST':
+        form = ExpenseForm(request.POST)
+        if form.is_valid():
+            expense = form.save(commit=False)
+            expense.paid_by = request.user
+            expense.created_by = request.user
+
+            # Set group from POST or GET
+            post_group_id = request.POST.get('group')
+            if post_group_id:
+                expense.group = get_object_or_404(Group, id=post_group_id)
+            elif group:
+                expense.group = group
+            expense.save()
+
+            # Process splits
+            split_type = expense.split_type
+            member_ids = request.POST.getlist('split_members')
+            members = list(User.objects.filter(id__in=member_ids))
+
+            if not members:
+                # If no members selected, default to all group members or just self
+                if expense.group:
+                    members = [m.user for m in expense.group.memberships.all()]
+                else:
+                    members = [request.user]
+
+            # Ensure payer is included in splits
+            if request.user not in members:
+                members.append(request.user)
+
+            split_data = None
+            if split_type == 'exact':
+                split_data = {}
+                for member in members:
+                    amt = request.POST.get(f'split_amount_{member.id}', '0')
+                    split_data[member] = Decimal(amt)
+            elif split_type == 'percentage':
+                split_data = {}
+                for member in members:
+                    pct = request.POST.get(f'split_pct_{member.id}', '0')
+                    split_data[member] = float(pct)
+            elif split_type == 'shares':
+                split_data = {}
+                for member in members:
+                    shares = request.POST.get(f'split_shares_{member.id}', '1')
+                    split_data[member] = int(shares)
+
+            create_expense_splits(expense, split_type, members, split_data)
+
+            # Notifications for involved users
+            for member in members:
+                if member != request.user:
+                    create_notification(
+                        member,
+                        f"{request.user.get_full_name() or request.user.username} added \"{expense.description}\" — ₹{expense.amount}",
+                        notification_type='expense',
+                        link=f'/expenses/{expense.id}/'
+                    )
+
+            log_activity(request.user, 'expense_added',
+                         f'Added "{expense.description}" — ₹{expense.amount}',
+                         group=expense.group, expense=expense)
+
+            messages.success(request, f'Expense "{expense.description}" added!')
+            if expense.group:
+                return redirect('group_detail', group_id=expense.group.id)
+            return redirect('dashboard')
+    else:
+        from datetime import date
+        form = ExpenseForm(initial={'date': date.today()})
+
+    # Get members for split selection
+    if group:
+        members = [m.user for m in group.memberships.select_related('user', 'user__profile').all()]
+    else:
+        members = get_friends(request.user)
+        members.append(request.user)
+
     categories = Category.objects.all()
-    return render(request, 'tracker/add_expense.html',{'categories': categories})
+    groups_list = Group.objects.filter(memberships__user=request.user)
+
+    context = {
+        'form': form,
+        'group': group,
+        'members': members,
+        'categories': categories,
+        'groups_list': groups_list,
+    }
+    return render(request, 'tracker/expenses/add.html', context)
+
+
+@login_required
+def expense_detail(request, expense_id):
+    """View expense details and splits."""
+    expense = get_object_or_404(Expense, id=expense_id)
+    # Verify user is involved
+    is_involved = (
+        expense.paid_by == request.user or
+        expense.splits.filter(user=request.user).exists() or
+        (expense.group and expense.group.memberships.filter(user=request.user).exists())
+    )
+    if not is_involved:
+        messages.error(request, "You don't have access to this expense.")
+        return redirect('dashboard')
+
+    splits = expense.splits.select_related('user', 'user__profile').all()
+    context = {
+        'expense': expense,
+        'splits': splits,
+    }
+    return render(request, 'tracker/expenses/detail.html', context)
+
 
 @login_required
 def edit_expense(request, expense_id):
-    expense= get_object_or_404(Expense, id=expense_id,user=request.user)
-    if request.method == 'POST':
-        expense.title = request.POST['title']
-        expense.amount = request.POST['amount']
-        expense.date = request.POST['date']
-        expense.category = Category.objects.get(id=request.POST['category'])
-        expense.save()
-        return redirect('expense_list')
-    categories = Category.objects.all()
-    return render(request, 'tracker/edit_expense.html', {'expense': expense, 'categories': categories})
+    """Edit an existing expense."""
+    expense = get_object_or_404(Expense, id=expense_id)
+    if expense.created_by != request.user and expense.paid_by != request.user:
+        messages.error(request, "You can only edit expenses you created or paid for.")
+        return redirect('expense_detail', expense_id=expense.id)
 
-def delete_expense(request, expense_id):
-    expense = get_object_or_404(Expense, id=expense_id, user=request.user)
     if request.method == 'POST':
+        form = ExpenseForm(request.POST, instance=expense)
+        if form.is_valid():
+            expense = form.save()
+            # Recalculate splits
+            expense.splits.all().delete()
+            split_type = expense.split_type
+            member_ids = request.POST.getlist('split_members')
+            members = list(User.objects.filter(id__in=member_ids))
+            if not members:
+                if expense.group:
+                    members = [m.user for m in expense.group.memberships.all()]
+                else:
+                    members = [expense.paid_by]
+            if expense.paid_by not in members:
+                members.append(expense.paid_by)
+
+            split_data = None
+            if split_type == 'exact':
+                split_data = {}
+                for member in members:
+                    amt = request.POST.get(f'split_amount_{member.id}', '0')
+                    split_data[member] = Decimal(amt)
+            elif split_type == 'percentage':
+                split_data = {}
+                for member in members:
+                    pct = request.POST.get(f'split_pct_{member.id}', '0')
+                    split_data[member] = float(pct)
+            elif split_type == 'shares':
+                split_data = {}
+                for member in members:
+                    shares = request.POST.get(f'split_shares_{member.id}', '1')
+                    split_data[member] = int(shares)
+
+            create_expense_splits(expense, split_type, members, split_data)
+            log_activity(request.user, 'expense_edited',
+                         f'Edited "{expense.description}"', group=expense.group, expense=expense)
+            messages.success(request, 'Expense updated!')
+            return redirect('expense_detail', expense_id=expense.id)
+    else:
+        form = ExpenseForm(instance=expense)
+
+    if expense.group:
+        members = [m.user for m in expense.group.memberships.select_related('user').all()]
+    else:
+        members = [s.user for s in expense.splits.select_related('user').all()]
+
+    context = {
+        'form': form,
+        'expense': expense,
+        'members': members,
+        'current_splits': {s.user_id: s.amount_owed for s in expense.splits.all()},
+    }
+    return render(request, 'tracker/expenses/edit.html', context)
+
+
+@login_required
+def delete_expense(request, expense_id):
+    """Delete an expense."""
+    expense = get_object_or_404(Expense, id=expense_id)
+    if expense.created_by != request.user and expense.paid_by != request.user:
+        messages.error(request, "You can only delete expenses you created or paid for.")
+        return redirect('expense_detail', expense_id=expense.id)
+
+    if request.method == 'POST':
+        group = expense.group
+        description = expense.description
         expense.delete()
-        return redirect('expense_list')
-    return render(request, 'tracker/delete_expense.html', {'expense': expense})
+        log_activity(request.user, 'expense_deleted', f'Deleted "{description}"', group=group)
+        messages.success(request, f'Expense "{description}" deleted.')
+        if group:
+            return redirect('group_detail', group_id=group.id)
+        return redirect('dashboard')
+    return render(request, 'tracker/expenses/delete.html', {'expense': expense})
+
+
+# ─────────────────────────────────────────────
+# Settlements
+# ─────────────────────────────────────────────
+
+@login_required
+def settle_up(request):
+    """Record a payment to settle debts."""
+    friends = get_friends(request.user)
+    group_id = request.GET.get('group')
+    to_user_id = request.GET.get('to')
+    group = None
+
+    if group_id:
+        group = get_object_or_404(Group, id=group_id)
+
+    if request.method == 'POST':
+        to_user_id = request.POST.get('to_user')
+        amount = Decimal(request.POST.get('amount', '0'))
+        date_val = request.POST.get('date')
+        notes = request.POST.get('notes', '')
+        post_group_id = request.POST.get('group', '')
+
+        to_user = get_object_or_404(User, id=to_user_id)
+        settle_group = None
+        if post_group_id:
+            settle_group = Group.objects.filter(id=post_group_id).first()
+
+        settlement = Settlement.objects.create(
+            from_user=request.user,
+            to_user=to_user,
+            amount=amount,
+            date=date_val,
+            group=settle_group,
+            notes=notes,
+        )
+        log_activity(request.user, 'settlement',
+                     f"{request.user.get_full_name() or request.user.username} paid ₹{amount} to {to_user.get_full_name() or to_user.username}",
+                     group=settle_group, settlement=settlement)
+        create_notification(
+            to_user,
+            f"{request.user.get_full_name() or request.user.username} paid you ₹{amount}",
+            notification_type='settlement',
+            link='/settle/history/'
+        )
+        messages.success(request, f'Payment of ₹{amount} to {to_user.get_full_name() or to_user.username} recorded!')
+        if settle_group:
+            return redirect('group_detail', group_id=settle_group.id)
+        return redirect('dashboard')
+
+    # Build friend data with balances
+    friend_options = []
+    for friend in friends:
+        balance = get_balance_between(request.user, friend, group=group)
+        friend_options.append({'user': friend, 'balance': balance})
+
+    from datetime import date
+    context = {
+        'friend_options': friend_options,
+        'group': group,
+        'groups': Group.objects.filter(memberships__user=request.user),
+        'preselected_to': int(to_user_id) if to_user_id else None,
+        'today': date.today(),
+    }
+    return render(request, 'tracker/settle/form.html', context)
+
+
+@login_required
+def settlement_history(request):
+    """View past settlements."""
+    settlements = Settlement.objects.filter(
+        Q(from_user=request.user) | Q(to_user=request.user)
+    ).order_by('-date')[:50]
+    return render(request, 'tracker/settle/history.html', {'settlements': settlements})
+
+
+# ─────────────────────────────────────────────
+# Activity Feed
+# ─────────────────────────────────────────────
+
+@login_required
+def activity_feed(request):
+    """View activity feed."""
+    activities = Activity.objects.filter(
+        Q(user=request.user) |
+        Q(group__memberships__user=request.user)
+    ).distinct().order_by('-created_at')[:50]
+    return render(request, 'tracker/activity/feed.html', {'activities': activities})
+
+
+# ─────────────────────────────────────────────
+# Notifications
+# ─────────────────────────────────────────────
+
+@login_required
+def notifications(request):
+    """View all notifications."""
+    user_notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:50]
+    # Mark all as read
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    return render(request, 'tracker/notifications.html', {'notifications': user_notifications})
+
+
+@login_required
+def mark_notification_read(request, notification_id):
+    """Mark a single notification as read."""
+    notification = get_object_or_404(Notification, id=notification_id, user=request.user)
+    notification.is_read = True
+    notification.save()
+    if notification.link:
+        return redirect(notification.link)
+    return redirect('notifications')
+
+
+# ─────────────────────────────────────────────
+# Profile
+# ─────────────────────────────────────────────
+
+@login_required
+def profile(request):
+    """Edit user profile."""
+    user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST)
+        if form.is_valid():
+            request.user.first_name = form.cleaned_data['first_name']
+            request.user.last_name = form.cleaned_data['last_name']
+            request.user.email = form.cleaned_data['email']
+            request.user.save()
+            user_profile.phone = form.cleaned_data.get('phone', '')
+            user_profile.save()
+            messages.success(request, 'Profile updated!')
+            return redirect('profile')
+    else:
+        form = UserProfileForm(initial={
+            'first_name': request.user.first_name,
+            'last_name': request.user.last_name,
+            'email': request.user.email,
+            'phone': user_profile.phone,
+        })
+
+    context = {
+        'form': form,
+        'user_profile': user_profile,
+    }
+    return render(request, 'tracker/profile.html', context)
+
+
+# ─────────────────────────────────────────────
+# Auth
+# ─────────────────────────────────────────────
 
 def signup(request):
+    """User registration."""
+    if request.user.is_authenticated:
+        return redirect('dashboard')
+
     if request.method == 'POST':
         form = UserRegisterForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
-            return redirect('expense_list')
+            auth_login(request, user)
+            messages.success(request, f'Welcome to SplitLite, {user.first_name or user.username}!')
+            return redirect('dashboard')
     else:
         form = UserRegisterForm()
     return render(request, 'registration/signup.html', {'form': form})
+
+
+def google_login(request):
+    """Redirect the user to Google's OAuth2 authorization screen."""
+    import urllib.parse
+    from django.urls import reverse
+    from decouple import config
+    
+    client_id = config('GOOGLE_CLIENT_ID', default='')
+    redirect_uri = request.build_absolute_uri(reverse('google_callback'))
+    
+    if not client_id or client_id == 'placeholder-google-client-id':
+        messages.error(request, "Google OAuth is not configured yet! Please set GOOGLE_CLIENT_ID in your .env file.")
+        return redirect('login')
+        
+    params = {
+        'client_id': client_id,
+        'redirect_uri': redirect_uri,
+        'response_type': 'code',
+        'scope': 'openid email profile',
+        'prompt': 'select_account',
+    }
+    url = 'https://accounts.google.com/o/oauth2/v2/auth?' + urllib.parse.urlencode(params)
+    return redirect(url)
+
+
+def google_callback(request):
+    """Handle the OAuth2 callback from Google, exchange code for user profile, and log in."""
+    import urllib.request
+    import urllib.parse
+    import json
+    from django.urls import reverse
+    from decouple import config
+    
+    code = request.GET.get('code')
+    if not code:
+        error_msg = request.GET.get('error', 'Google authentication was cancelled.')
+        messages.error(request, f"Authentication failed: {error_msg}")
+        return redirect('login')
+
+    client_id = config('GOOGLE_CLIENT_ID', default='')
+    client_secret = config('GOOGLE_CLIENT_SECRET', default='')
+    redirect_uri = request.build_absolute_uri(reverse('google_callback'))
+
+    # Exchange authorization code for access token
+    token_url = 'https://oauth2.googleapis.com/token'
+    token_data = urllib.parse.urlencode({
+        'code': code,
+        'client_id': client_id,
+        'client_secret': client_secret,
+        'redirect_uri': redirect_uri,
+        'grant_type': 'authorization_code',
+    }).encode('utf-8')
+
+    try:
+        token_req = urllib.request.Request(token_url, data=token_data, method='POST')
+        token_req.add_header('Content-Type', 'application/x-www-form-urlencoded')
+        
+        with urllib.request.urlopen(token_req) as response:
+            token_response = json.loads(response.read().decode('utf-8'))
+            access_token = token_response.get('access_token')
+
+        if not access_token:
+            messages.error(request, "Failed to retrieve access token from Google.")
+            return redirect('login')
+
+        # Retrieve user info using access token
+        userinfo_url = 'https://www.googleapis.com/oauth2/v3/userinfo'
+        userinfo_req = urllib.request.Request(userinfo_url)
+        userinfo_req.add_header('Authorization', f'Bearer {access_token}')
+
+        with urllib.request.urlopen(userinfo_req) as response:
+            user_data = json.loads(response.read().decode('utf-8'))
+
+        email = user_data.get('email')
+        if not email:
+            messages.error(request, "Failed to retrieve email address from Google account.")
+            return redirect('login')
+
+        # Find or create user
+        user = User.objects.filter(email=email).first()
+        created = False
+        if not user:
+            # Generate a clean unique username
+            base_username = email.split('@')[0]
+            username = base_username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+
+            given_name = user_data.get('given_name', '')
+            family_name = user_data.get('family_name', '')
+            
+            # Create the User object
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=given_name,
+                last_name=family_name
+            )
+            # Create a random password
+            user.set_unusable_password()
+            user.save()
+            created = True
+
+        # Log user in
+        auth_login(request, user)
+        if created:
+            messages.success(request, f'Welcome to SplitLite, {user.first_name or user.username}! Google account registered successfully.')
+        else:
+            messages.success(request, f'Welcome back, {user.first_name or user.username}! Signed in via Google.')
+
+        return redirect('dashboard')
+
+    except Exception as e:
+        messages.error(request, f"Error communicating with Google authentication services: {str(e)}")
+        return redirect('login')
+
+
+# ─────────────────────────────────────────────
+# Reports
+# ─────────────────────────────────────────────
 
 MONTHS = {
     1: 'January', 2: 'February', 3: 'March', 4: 'April',
@@ -96,89 +951,61 @@ MONTHS = {
     9: 'September', 10: 'October', 11: 'November', 12: 'December'
 }
 
+
 @login_required
 def monthly_report(request):
+    """Monthly expense report."""
     today = now()
     current_year = today.year
 
-    # Fetch monthly expenses and annotate with totals
-    monthly_expenses = Expense.objects.filter(
-        user=request.user,
-        date__year=current_year
+    # Expenses user paid
+    monthly_paid = Expense.objects.filter(
+        paid_by=request.user, date__year=current_year
     ).values('date__month').annotate(total=Sum('amount')).order_by('date__month')
 
-    # Add the month name to each entry in the queryset
-    for item in monthly_expenses:
-        item['month'] = MONTHS[item['date__month']]  # Add month name to each item
+    # Expenses user owes (splits)
+    monthly_owed = ExpenseSplit.objects.filter(
+        user=request.user, expense__date__year=current_year
+    ).exclude(expense__paid_by=request.user).values(
+        'expense__date__month'
+    ).annotate(total=Sum('amount_owed')).order_by('expense__date__month')
 
-    # Pass the updated data to the template
-    return render(request, 'tracker/monthly_report.html', {
-        'monthly_expenses': monthly_expenses,
+    for item in monthly_paid:
+        item['month'] = MONTHS.get(item['date__month'], '')
+    for item in monthly_owed:
+        item['month'] = MONTHS.get(item['expense__date__month'], '')
+
+    context = {
+        'monthly_paid': monthly_paid,
+        'monthly_owed': monthly_owed,
         'current_year': current_year,
-    })
+    }
+    return render(request, 'tracker/reports/monthly.html', context)
+
 
 @login_required
-def export_csv(request, mail=False):
-    # Create an in-memory buffer to store the CSV data
-    csv_buffer = StringIO()
-    writer = csv.writer(csv_buffer)
+def export_csv(request):
+    """Export expenses as CSV."""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename=expenses.csv'
+    writer = csv.writer(response)
+    writer.writerow(['Description', 'Amount', 'Date', 'Paid By', 'Category', 'Group', 'Split Type', 'Your Share'])
 
-    # Write the header row
-    writer.writerow(['Title', 'Amount', 'Date', 'Category', 'User'])
+    expenses = Expense.objects.filter(
+        Q(paid_by=request.user) | Q(splits__user=request.user)
+    ).distinct().select_related('paid_by', 'category', 'group')
 
-    # Fetch the user's expenses
-    expenses = Expense.objects.filter(user=request.user).select_related('category')
     for expense in expenses:
+        split = expense.splits.filter(user=request.user).first()
+        your_share = split.amount_owed if split else ''
         writer.writerow([
-            expense.title,
+            expense.description,
             expense.amount,
             expense.date,
-            expense.category.name,
-            request.user.username
+            expense.paid_by.get_full_name() or expense.paid_by.username,
+            expense.category.name if expense.category else '',
+            expense.group.name if expense.group else 'Non-group',
+            expense.get_split_type_display(),
+            your_share,
         ])
-
-    # If the mail flag is True, return the CSV as a string
-    if mail:
-        return csv_buffer.getvalue()
-
-    # Otherwise, return an HTTP response for downloading
-    csv_buffer.seek(0)  # Reset the buffer pointer
-    response = HttpResponse(csv_buffer, content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename=expenses.csv'
     return response
-
-@login_required
-def notifications(request):
-    user_notifications = Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')
-    print(user_notifications)
-    print(request.user)
-    return render(request, 'tracker/notification.html', {'notifications': user_notifications})
-
-@login_required
-def mark_notification_as_read(request, notification_id):
-    notification = Notification.objects.get(id=notification_id, user=request.user)
-    notification.is_read = True
-    notification.save()
-    return redirect('notifications')
-
-from django.core.mail import EmailMessage
-
-@login_required
-def send_test_email(request):
-    csv_data = export_csv(request, mail=True)
-
-    email = EmailMessage(
-        subject='Test Email from Jindal Expense Tracker',
-        body='Dear User,\n\nHere is your CSV report. Please find it attached.\n\nBest regards,\nJindal Expense Tracker Team',
-        from_email='garvjindal2@gmail.com',
-        to=[f'{request.user.email}']
-    )
-    messages.success(request, 'Email Sent Successfully')
-    
-
-    email.attach('expenses.csv', csv_data, 'text/csv')
-
-    email.send()
-
-    return render(request, 'tracker/expense_list.html')
-

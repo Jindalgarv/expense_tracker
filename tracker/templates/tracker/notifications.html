@@ -1,0 +1,66 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>🔔 Notifications</h1>
+        <div class="page-subtitle">Stay updated on your shared expenses, groups, and settlements.</div>
+    </div>
+</div>
+
+<div class="card card-glass animate-slide-up" style="max-width: 800px; margin: 0 auto;">
+    <div class="card-body" style="padding: 0;">
+        {% if notifications %}
+            <div style="display: flex; flex-direction: column;">
+                {% for notif in notifications %}
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-color); {% if notnotif.is_read %}background: rgba(255, 255, 255, 0.01);{% else %}background: rgba(29, 209, 161, 0.03); border-left: 3px solid var(--color-primary);{% endif %} transition: background var(--transition-fast);">
+                    <div style="display: flex; align-items: center; gap: var(--space-md); flex: 1;">
+                        <span style="font-size: 1.4rem;">
+                            {% if notif.notification_type == 'expense' %}
+                            💰
+                            {% elif notif.notification_type == 'settlement' %}
+                            🤝
+                            {% elif notif.notification_type == 'friend_request' %}
+                            👥
+                            {% elif notif.notification_type == 'group' %}
+                            📁
+                            {% else %}
+                            🔔
+                            {% endif %}
+                        </span>
+                        <div>
+                            {% if notif.link %}
+                            <a href="{% url 'mark_notification_read' notif.id %}" style="font-weight: 500; font-size: 0.95rem; color: var(--text-primary); text-decoration: none; display: block;">
+                                {{ notif.message }}
+                            </a>
+                            {% else %}
+                            <span style="font-weight: 500; font-size: 0.95rem; color: var(--text-primary); display: block;">
+                                {{ notif.message }}
+                            </span>
+                            {% endif %}
+                            <span class="text-muted" style="font-size: 0.75rem; display: block; margin-top: 2px;">
+                                {{ notif.created_at|time_since_short }} ago
+                            </span>
+                        </div>
+                    </div>
+                    {% if notif.link %}
+                    <a href="{% url 'mark_notification_read' notif.id %}" class="btn btn-ghost btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
+                        View ➡️
+                    </a>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state" style="text-align: center; padding: var(--space-2xl) var(--space-xl); color: var(--text-secondary);">
+                <div style="font-size: 3rem; margin-bottom: var(--space-md);">🔔</div>
+                <h3>All caught up!</h3>
+                <p style="font-size: 0.9rem; margin-top: 4px;">You have no new or recent notifications.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

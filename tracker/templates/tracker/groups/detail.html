@@ -1,0 +1,178 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}{{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div class="flex items-center gap-md" style="display: flex; align-items: center; gap: var(--space-md);">
+        <span style="font-size: 2.2rem;">{{ group.get_type_display_icon }}</span>
+        <div>
+            <h1>{{ group.name }}</h1>
+            <div class="page-subtitle">
+                Created by {{ group.created_by.get_full_name|default:group.created_by.username }} • 
+                {{ group.memberships.count }} members • 
+                {% if group.simplify_debts %}🧠 Simplified debts enabled{% else %}Simplification disabled{% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="flex gap-sm">
+        <a href="{% url 'add_expense' %}?group={{ group.id }}" class="btn btn-primary">
+            ➕ Add Expense
+        </a>
+        <a href="{% url 'settle_up' %}?group={{ group.id }}" class="btn btn-secondary">
+            🤝 Settle Up
+        </a>
+        <a href="{% url 'group_balances' group.id %}" class="btn btn-outline-primary">
+            ⚖️ View Balances
+        </a>
+        {% if is_admin %}
+        <a href="{% url 'edit_group' group.id %}" class="btn btn-outline" style="padding: 0.55rem;">⚙️</a>
+        <a href="{% url 'delete_group' group.id %}" class="btn btn-outline" style="padding: 0.55rem; color: var(--color-negative); border-color: rgba(255, 107, 107, 0.2);">🗑️</a>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Balance Status Display Card -->
+<div class="card card-glass mb-4 animate-slide-up" style="max-width: 900px; margin: 0 auto var(--space-lg); text-align: center; padding: var(--space-xl);">
+    <div class="card-body">
+        {% if user_balance > 0 %}
+        <div class="text-positive" style="font-size: 2.2rem; font-family: 'Outfit', sans-serif; font-weight: 700;">
+            {{ user_balance|currency }}
+        </div>
+        <p style="font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); margin-top: 4px;">
+            You are owed in this group
+        </p>
+        {% elif user_balance < 0 %}
+        <div class="text-negative" style="font-size: 2.2rem; font-family: 'Outfit', sans-serif; font-weight: 700;">
+            {{ user_balance|abs_value|currency }}
+        </div>
+        <p style="font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); margin-top: 4px;">
+            You owe in this group
+        </p>
+        {% else %}
+        <div class="text-muted" style="font-size: 2rem; font-family: 'Outfit', sans-serif; font-weight: 700; color: var(--color-primary);">
+            ₹0.00
+        </div>
+        <p style="font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); margin-top: 4px;">
+            You are completely settled up in this group!
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="animate-slide-up" style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-xl); max-width: 900px; margin: 0 auto; align-items: start;">
+    <!-- Main Content Area: Recent Expenses -->
+    <div style="display: flex; flex-direction: column; gap: var(--space-xl);">
+        <!-- Shared Expenses List -->
+        <div class="card card-glass">
+            <div class="card-header">
+                <h2>💰 Group Expenses</h2>
+            </div>
+            <div class="card-body" style="padding: 0;">
+                {% if expenses %}
+                    <div style="display: flex; flex-direction: column;">
+                        {% for exp in expenses %}
+                        <a href="{% url 'expense_detail' exp.id %}" class="list-item" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md); border-bottom: 1px solid var(--border-color); text-decoration: none; color: inherit; transition: all var(--transition-fast);">
+                            <div style="display: flex; align-items: center; gap: var(--space-md);">
+                                <span style="font-size: 1.5rem;">{{ exp.category.icon|default:"📦" }}</span>
+                                <div>
+                                    <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary);">{{ exp.description }}</div>
+                                    <div class="text-muted" style="font-size: 0.75rem;">
+                                        Paid by {{ exp.paid_by.get_full_name|default:exp.paid_by.username }} • {{ exp.date|date:"M d, Y" }}
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="text-align: right; display: flex; align-items: center; gap: var(--space-md);">
+                                <div>
+                                    <div style="font-weight: 700; font-size: 0.92rem; color: var(--text-primary);">
+                                        {{ exp.amount|currency }}
+                                    </div>
+                                    <span class="badge" style="font-size: 0.65rem; padding: 1px 6px; border-radius: var(--radius-full); background: rgba(255,255,255,0.03);">
+                                        {{ exp.get_split_type_display }}
+                                    </span>
+                                </div>
+                                <span style="font-size: 0.85rem; color: var(--text-disabled);">➡️</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="empty-state" style="text-align: center; padding: var(--space-2xl) var(--space-xl); color: var(--text-secondary);">
+                        <div style="font-size: 3rem; margin-bottom: var(--space-md);">💰</div>
+                        <h3>No expenses added yet</h3>
+                        <p style="font-size: 0.85rem; margin-top: 4px;">Split group expenses (food, travel, house rents) easily.</p>
+                        <a href="{% url 'add_expense' %}?group={{ group.id }}" class="btn btn-primary btn-sm" style="margin-top: var(--space-md);">
+                            ➕ Add Group Expense
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Settlements History -->
+        {% if settlements %}
+        <div class="card card-glass">
+            <div class="card-header">
+                <h2>🤝 Settlements History</h2>
+            </div>
+            <div class="card-body" style="padding: 0;">
+                <div style="display: flex; flex-direction: column;">
+                    {% for stl in settlements %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md); border-bottom: 1px solid var(--border-color); font-size: 0.88rem;">
+                        <div>
+                            <div style="font-weight: 500;">
+                                {{ stl.from_user.get_full_name|default:stl.from_user.username }} paid 
+                                {{ stl.to_user.get_full_name|default:stl.to_user.username }}
+                            </div>
+                            <div class="text-muted" style="font-size: 0.75rem;">{{ stl.date|date:"M d, Y" }}</div>
+                        </div>
+                        <div class="text-positive" style="font-weight: 700; font-size: 0.9rem; color: var(--color-primary);">
+                            {{ stl.amount|currency }}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar Column: Group Members List -->
+    <div class="card card-glass" style="display: flex; flex-direction: column; gap: var(--space-md);">
+        <div class="card-header flex flex-between" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+            <h2>👥 Members</h2>
+            <a href="{% url 'add_group_member' group.id %}" class="btn btn-ghost btn-sm text-primary" style="padding: 2px 6px;">➕ Add</a>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                {% for mb in members %}
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-xs) 0;">
+                    <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                        <div class="avatar avatar-sm" style="background-color: {{ mb.user|avatar_color }}; color: #0f1117; font-weight: 700;">
+                            {{ mb.user|initials }}
+                        </div>
+                        <div>
+                            <div style="font-weight: 600; font-size: 0.85rem;">{{ mb.user.get_full_name|default:mb.user.username }}</div>
+                            <span class="badge {% if mb.role == 'admin' %}badge-positive{% endif %}" style="font-size: 0.62rem; padding: 1px 5px;">
+                                {{ mb.get_role_display }}
+                            </span>
+                        </div>
+                    </div>
+                    
+                    {% if is_admin and mb.user != user and mb.user != group.created_by %}
+                    <form method="POST" action="{% url 'remove_group_member' group.id mb.user.id %}" onsubmit="return confirm('Are you sure you want to remove {{ mb.user.username }} from the group?');">
+                        {% csrf_token %}
+                        <button type="submit" style="background: none; border: none; cursor: pointer; color: var(--color-negative); font-size: 0.82rem; padding: 2px;">
+                            ❌
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

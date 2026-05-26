@@ -1,0 +1,41 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Delete Expense{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>🗑️ Delete Expense</h1>
+        <div class="page-subtitle">Permanently delete this shared expense.</div>
+    </div>
+</div>
+
+<div class="animate-slide-up" style="max-width: 500px; margin: 40px auto;">
+    <div class="card" style="border-color: var(--color-negative); box-shadow: 0 0 20px rgba(255, 107, 107, 0.1);">
+        <div class="card-header" style="margin-bottom: var(--space-sm);">
+            <h2 style="color: var(--color-negative);">⚠️ Confirm Deletion</h2>
+        </div>
+        <div class="card-body">
+            <p style="color: var(--text-primary); font-weight: 500; font-size: 0.95rem;">
+                Are you sure you want to delete the expense <strong>"{{ expense.description }}"</strong>?
+            </p>
+            <div style="margin: var(--space-md) 0; padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); background: rgba(255,255,255,0.02); border-left: 3px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                <span class="text-muted" style="font-size: 0.85rem;">Total Expense Amount:</span>
+                <strong style="font-size: 1.1rem; color: var(--color-negative);">{{ expense.amount|currency }}</strong>
+            </div>
+            <p class="text-muted" style="font-size: 0.82rem; line-height: 1.4;">
+                This will delete the expense and all corresponding splits, updating the balances for all involved members.
+            </p>
+
+            <form method="POST" style="display: flex; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-lg);">
+                {% csrf_token %}
+                <a href="{% url 'expense_detail' expense.id %}" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-danger">
+                    🗑️ Delete Expense
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

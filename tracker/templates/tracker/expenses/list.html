@@ -1,0 +1,111 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Expenses{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>💰 Expenses</h1>
+        <div class="page-subtitle">A comprehensive list of shared expenses across your groups and friendships.</div>
+    </div>
+    <div>
+        <a href="{% url 'add_expense' %}" class="btn btn-primary">
+            ➕ Add Expense
+        </a>
+    </div>
+</div>
+
+<!-- Filters Bar Card -->
+<div class="card card-glass mb-4 animate-slide-up" style="max-width: 900px; margin: 0 auto 1.5rem;">
+    <div class="card-body" style="padding: var(--space-md);">
+        <form method="GET" style="display: flex; gap: var(--space-sm); align-items: flex-end; flex-wrap: wrap;">
+            <!-- Category Filter -->
+            <div class="form-group" style="flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: var(--space-xs); margin-bottom: 0;">
+                <label for="category_filter" style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Filter by Category</label>
+                <select name="category" id="category_filter" class="form-select" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: var(--radius-md);">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                    <option value="{{ cat.id }}" {% if selected_category == cat.id|stringformat:"i" %}selected{% endif %}>
+                        {{ cat.icon }} {{ cat.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Group Filter -->
+            <div class="form-group" style="flex: 1; min-width: 180px; display: flex; flex-direction: column; gap: var(--space-xs); margin-bottom: 0;">
+                <label for="group_filter" style="font-size: 0.75rem; font-weight: 600; color: var(--text-secondary);">Filter by Group</label>
+                <select name="group" id="group_filter" class="form-select" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem; border-radius: var(--radius-md);">
+                    <option value="">All Groups</option>
+                    {% for gp in groups %}
+                    <option value="{{ gp.id }}" {% if selected_group == gp.id|stringformat:"i" %}selected{% endif %}>
+                        {{ gp.get_type_display_icon }} {{ gp.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; gap: var(--space-xs);">
+                <button type="submit" class="btn btn-secondary">
+                    ⚡ Apply Filters
+                </button>
+                <a href="{% url 'expense_list' %}" class="btn btn-outline" style="padding: 0.55rem 1rem;">
+                    🔄 Reset
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Expenses List Card -->
+<div class="card card-glass animate-slide-up" style="max-width: 900px; margin: 0 auto;">
+    <div class="card-body" style="padding: 0;">
+        {% if expenses %}
+            <div style="display: flex; flex-direction: column;">
+                {% for exp in expenses %}
+                <a href="{% url 'expense_detail' exp.id %}" class="list-item" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-color); text-decoration: none; color: inherit; transition: all var(--transition-fast);">
+                    <div style="display: flex; align-items: center; gap: var(--space-md); flex: 1; min-width: 0;">
+                        <!-- Category Icon -->
+                        <span style="font-size: 1.8rem; background: rgba(255,255,255,0.03); width: 44px; height: 44px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                            {{ exp.category.icon|default:"📦" }}
+                        </span>
+                        
+                        <div style="min-width: 0;">
+                            <h3 style="font-size: 0.95rem; font-weight: 600; color: var(--text-primary); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
+                                {{ exp.description }}
+                            </h3>
+                            <div class="text-muted" style="font-size: 0.75rem; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; margin-top: 2px;">
+                                Paid by <strong>{{ exp.paid_by.get_full_name|default:exp.paid_by.username }}</strong>
+                                {% if exp.group %} in 📁 <strong>{{ exp.group.name }}</strong>{% else %} (Non-group){% endif %} • {{ exp.date|date:"b d, Y" }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="text-align: right; display: flex; align-items: center; gap: var(--space-md); margin-left: var(--space-md);">
+                        <div>
+                            <div style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.05rem; color: var(--text-primary);">
+                                {{ exp.amount|currency }}
+                            </div>
+                            <span class="badge" style="font-size: 0.65rem; padding: 1px 6px; border-radius: var(--radius-full); background: rgba(255,255,255,0.04); border: 1px solid var(--border-color); margin-top: 2px; display: inline-block;">
+                                {{ exp.get_split_type_display }}
+                            </span>
+                        </div>
+                        <span style="font-size: 0.85rem; color: var(--text-disabled);">➡️</span>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="empty-state" style="text-align: center; padding: var(--space-2xl) var(--space-xl); color: var(--text-secondary);">
+                <div style="font-size: 3rem; margin-bottom: var(--space-md);">💰</div>
+                <h3>No expenses found</h3>
+                <p style="font-size: 0.9rem; margin-top: 4px;">Try modifying your search filters or add a new expense.</p>
+                <a href="{% url 'add_expense' %}" class="btn btn-primary btn-sm" style="margin-top: var(--space-md);">
+                    ➕ Add Expense
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Delete Group — {{ group.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>🗑️ Delete Group</h1>
+        <div class="page-subtitle">Remove group and its history permanently.</div>
+    </div>
+</div>
+
+<div class="animate-slide-up" style="max-width: 500px; margin: 40px auto;">
+    <div class="card" style="border-color: var(--color-negative); box-shadow: 0 0 20px rgba(255, 107, 107, 0.1);">
+        <div class="card-header" style="margin-bottom: var(--space-sm);">
+            <h2 style="color: var(--color-negative);">⚠️ Warning: Permanent Action</h2>
+        </div>
+        <div class="card-body">
+            <p style="color: var(--text-primary); font-weight: 500; font-size: 0.95rem;">
+                Are you absolutely sure you want to delete the group <strong>"{{ group.name }}"</strong>?
+            </p>
+            <p class="text-muted" style="font-size: 0.82rem; margin-top: 6px; line-height: 1.4;">
+                This will permanently delete all shared expenses, settlements, and member balances inside this group. This action cannot be undone.
+            </p>
+
+            <form method="POST" style="display: flex; justify-content: flex-end; gap: var(--space-sm); margin-top: var(--space-lg);">
+                {% csrf_token %}
+                <a href="{% url 'group_detail' group.id %}" class="btn btn-outline">Cancel</a>
+                <button type="submit" class="btn btn-danger">
+                    🗑️ Delete Permanently
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

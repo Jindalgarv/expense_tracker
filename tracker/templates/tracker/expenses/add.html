@@ -1,0 +1,369 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Add Expense{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>💰 Add Expense</h1>
+        {% if group %}
+        <div class="page-subtitle">Adding expense to group: <strong>{{ group.name }}</strong></div>
+        {% else %}
+        <div class="page-subtitle">Create a new shared expense.</div>
+        {% endif %}
+    </div>
+    <div>
+        {% if group %}
+        <a href="{% url 'group_detail' group.id %}" class="btn btn-outline">⬅️ Cancel</a>
+        {% else %}
+        <a href="{% url 'expense_list' %}" class="btn btn-outline">⬅️ Cancel</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="animate-slide-up" style="max-width: 900px; margin: 0 auto;">
+    <form method="POST" id="expenseForm" onsubmit="return validateSplitTotal()" style="display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--space-xl); align-items: start;">
+        {% csrf_token %}
+        
+        <!-- Left: Primary Expense Information -->
+        <div class="card card-glass" style="display: flex; flex-direction: column; gap: var(--space-md);">
+            <div class="card-header" style="margin-bottom: 0;">
+                <h2>✏️ Expense Details</h2>
+            </div>
+
+            {% if form.errors %}
+            <div style="background: rgba(255,107,107,0.1); border: 1px solid var(--color-negative); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md); color: var(--color-negative); font-size: 0.85rem;">
+                {{ form.errors }}
+            </div>
+            {% endif %}
+
+            <!-- Description -->
+            <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                <label for="id_description" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Description</label>
+                {{ form.description }}
+            </div>
+
+            <!-- Amount -->
+            <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                <label for="id_amount" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Total Amount (₹)</label>
+                {{ form.amount }}
+            </div>
+
+            <!-- Date -->
+            <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                <label for="id_date" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Date</label>
+                {{ form.date }}
+            </div>
+
+            <!-- Category -->
+            <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                <label for="id_category" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Category</label>
+                {{ form.category }}
+            </div>
+
+            <!-- Group (if not already set via GET parameter) -->
+            {% if not group %}
+            <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                <label for="group_select" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Group (Optional)</label>
+                <select name="group" id="group_select" class="form-select" onchange="loadGroupMembers(this.value)" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.6rem; border-radius: var(--radius-md);">
+                    <option value="">Non-group Expense (splits with friends)</option>
+                    {% for gp in groups_list %}
+                    <option value="{{ gp.id }}">{{ gp.get_type_display_icon }} {{ gp.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            {% else %}
+            <input type="hidden" name="group" value="{{ group.id }}">
+            {% endif %}
+
+            <!-- Split Type Select -->
+            <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                <label for="id_split_type" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Split Type</label>
+                {{ form.split_type }}
+            </div>
+
+            <!-- Notes -->
+            <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                <label for="id_notes" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Notes</label>
+                {{ form.notes }}
+            </div>
+        </div>
+
+        <!-- Right: Splits & Members Details Config -->
+        <div class="card card-glass" style="display: flex; flex-direction: column; gap: var(--space-md);">
+            <div class="card-header" style="margin-bottom: 0;">
+                <h2>👥 Split Breakdown</h2>
+            </div>
+            
+            <div class="card-body" style="padding: 0;">
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: var(--space-md);">
+                    Select which group members or friends are involved in this expense:
+                </p>
+
+                <!-- Error notice banner -->
+                <div id="splitErrorBanner" style="display: none; background: rgba(255,107,107,0.1); border: 1px solid var(--color-negative); padding: var(--space-sm); border-radius: var(--radius-md); color: var(--color-negative); font-size: 0.8rem; margin-bottom: var(--space-sm);"></div>
+
+                <!-- Members Checklist container -->
+                <div id="membersContainer" style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                    {% for member in members %}
+                    <div class="member-split-card" id="member_card_{{ member.id }}" style="display: flex; flex-direction: column; gap: var(--space-xs); padding: var(--space-sm); border-radius: var(--radius-md); border: 1px solid var(--border-color); background: rgba(255,255,255,0.01);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                            <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; margin: 0; flex: 1;">
+                                <input type="checkbox" name="split_members" value="{{ member.id }}" checked onchange="updateSplitInputs()" style="width: 18px; height: 18px; accent-color: var(--color-primary);">
+                                <span class="avatar avatar-sm" style="background-color: {{ member|avatar_color }}; color: #0f1117; font-weight: 700;">
+                                    {{ member|initials }}
+                                </span>
+                                <span style="font-size: 0.88rem; font-weight: 500;">
+                                    {{ member.get_full_name|default:member.username }}
+                                    {% if member == user %}<span class="text-muted">(You)</span>{% endif %}
+                                </span>
+                            </label>
+                            
+                            <!-- Split input wrappers -->
+                            <div class="split-input-wrapper" id="inputs_{{ member.id }}">
+                                <!-- Exact split input -->
+                                <div class="split-section split-exact-item" style="display: none;">
+                                    <input type="number" step="0.01" min="0" name="split_amount_{{ member.id }}" value="0.00" class="form-input exact-field" onchange="updateSplitValues()" oninput="updateSplitValues()" style="width: 80px; padding: 4px 8px; font-size: 0.85rem; text-align: right;">
+                                </div>
+                                
+                                <!-- Percentage split input -->
+                                <div class="split-section split-percentage-item" style="display: none;">
+                                    <input type="number" step="0.1" min="0" max="100" name="split_pct_{{ member.id }}" value="0" class="form-input pct-field" onchange="updateSplitValues()" oninput="updateSplitValues()" style="width: 60px; padding: 4px 8px; font-size: 0.85rem; text-align: right;"> %
+                                </div>
+                                
+                                <!-- Shares split input -->
+                                <div class="split-section split-shares-item" style="display: none;">
+                                    <input type="number" min="1" step="1" name="split_shares_{{ member.id }}" value="1" class="form-input shares-field" onchange="updateSplitValues()" oninput="updateSplitValues()" style="width: 60px; padding: 4px 8px; font-size: 0.85rem; text-align: right;"> shares
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Realtime calculated share preview display -->
+                        <div class="share-preview-line flex flex-between" style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-secondary); margin-left: 28px; border-top: 1px dashed rgba(255,255,255,0.03); padding-top: 2px;">
+                            <span>Calculated Share:</span>
+                            <span class="calculated-amount text-primary" style="font-weight: 600;">₹0.00</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="sidebar-divider" style="margin: var(--space-md) 0;"></div>
+                
+                <div class="flex flex-between items-center" style="display: flex; justify-content: space-between; align-items: center; padding: 0 var(--space-sm);">
+                    <span style="font-weight: 600; font-size: 0.9rem;">Remaining:</span>
+                    <span id="remainingSplitLabel" style="font-weight: 700; font-size: 1rem; color: var(--color-primary);">₹0.00</span>
+                </div>
+            </div>
+            
+            <div class="sidebar-divider" style="margin: var(--space-sm) 0;"></div>
+            
+            <button type="submit" class="btn btn-primary btn-block">
+                🚀 Add Expense
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Reactive interactive UI client controller -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const splitTypeSelect = document.getElementById('id_split_type');
+        const amountInput = document.getElementById('id_amount');
+        
+        splitTypeSelect.addEventListener('change', updateSplitInputs);
+        amountInput.addEventListener('input', updateSplitValues);
+        
+        updateSplitInputs();
+    });
+
+    function updateSplitInputs() {
+        const splitType = document.getElementById('id_split_type').value;
+        
+        // Show/hide correct input forms depending on type
+        document.querySelectorAll('.split-exact-item').forEach(el => el.style.display = splitType === 'exact' ? 'block' : 'none');
+        document.querySelectorAll('.split-percentage-item').forEach(el => el.style.display = splitType === 'percentage' ? 'block' : 'none');
+        document.querySelectorAll('.split-shares-item').forEach(el => el.style.display = splitType === 'shares' ? 'block' : 'none');
+        
+        // Update checkbox visual styling
+        document.querySelectorAll('input[name="split_members"]').forEach(chk => {
+            const card = document.getElementById('member_card_' + chk.value);
+            const inputsWrapper = document.getElementById('inputs_' + chk.value);
+            const previewLine = card.querySelector('.share-preview-line');
+            
+            if (chk.checked) {
+                card.style.opacity = '1';
+                inputsWrapper.style.pointerEvents = 'auto';
+                previewLine.style.display = 'flex';
+            } else {
+                card.style.opacity = '0.5';
+                inputsWrapper.style.pointerEvents = 'none';
+                previewLine.style.display = 'none';
+            }
+        });
+
+        updateSplitValues();
+    }
+
+    function updateSplitValues() {
+        const amount = parseFloat(document.getElementById('id_amount').value) || 0;
+        const splitType = document.getElementById('id_split_type').value;
+        const checkedMembers = Array.from(document.querySelectorAll('input[name="split_members"]:checked')).map(el => el.value);
+        const errorBanner = document.getElementById('splitErrorBanner');
+        const remainingLabel = document.getElementById('remainingSplitLabel');
+        
+        errorBanner.style.display = 'none';
+        remainingLabel.style.color = 'var(--color-primary)';
+        remainingLabel.textContent = '₹0.00';
+        
+        if (checkedMembers.length === 0) {
+            document.querySelectorAll('.calculated-amount').forEach(el => el.textContent = '₹0.00');
+            return;
+        }
+
+        if (splitType === 'equal') {
+            const share = amount / checkedMembers.length;
+            document.querySelectorAll('input[name="split_members"]').forEach(chk => {
+                const card = document.getElementById('member_card_' + chk.value);
+                const display = card.querySelector('.calculated-amount');
+                if (chk.checked) {
+                    display.textContent = '₹' + share.toFixed(2);
+                } else {
+                    display.textContent = '₹0.00';
+                }
+            });
+        }
+        else if (splitType === 'exact') {
+            let totalAllocated = 0;
+            document.querySelectorAll('input[name="split_members"]').forEach(chk => {
+                const card = document.getElementById('member_card_' + chk.value);
+                const display = card.querySelector('.calculated-amount');
+                const valInput = card.querySelector('.exact-field');
+                
+                if (chk.checked) {
+                    const val = parseFloat(valInput.value) || 0;
+                    totalAllocated += val;
+                    display.textContent = '₹' + val.toFixed(2);
+                } else {
+                    display.textContent = '₹0.00';
+                }
+            });
+            const remaining = amount - totalAllocated;
+            remainingLabel.textContent = '₹' + remaining.toFixed(2);
+            if (Math.abs(remaining) > 0.01) {
+                remainingLabel.style.color = 'var(--color-negative)';
+            }
+        }
+        else if (splitType === 'percentage') {
+            let totalPct = 0;
+            document.querySelectorAll('input[name="split_members"]').forEach(chk => {
+                const card = document.getElementById('member_card_' + chk.value);
+                const display = card.querySelector('.calculated-amount');
+                const valInput = card.querySelector('.pct-field');
+                
+                if (chk.checked) {
+                    const pct = parseFloat(valInput.value) || 0;
+                    totalPct += pct;
+                    const val = amount * (pct / 100.0);
+                    display.textContent = '₹' + val.toFixed(2);
+                } else {
+                    display.textContent = '₹0.00';
+                }
+            });
+            const remainingPct = 100.0 - totalPct;
+            remainingLabel.textContent = remainingPct.toFixed(1) + '% remaining';
+            if (Math.abs(remainingPct) > 0.01) {
+                remainingLabel.style.color = 'var(--color-negative)';
+            }
+        }
+        else if (splitType === 'shares') {
+            let totalShares = 0;
+            const sharesMap = {};
+            
+            document.querySelectorAll('input[name="split_members"]').forEach(chk => {
+                const card = document.getElementById('member_card_' + chk.value);
+                const valInput = card.querySelector('.shares-field');
+                
+                if (chk.checked) {
+                    const sh = parseInt(valInput.value) || 0;
+                    totalShares += sh;
+                    sharesMap[chk.value] = sh;
+                }
+            });
+
+            document.querySelectorAll('input[name="split_members"]').forEach(chk => {
+                const card = document.getElementById('member_card_' + chk.value);
+                const display = card.querySelector('.calculated-amount');
+                
+                if (chk.checked && totalShares > 0) {
+                    const val = amount * (sharesMap[chk.value] / totalShares);
+                    display.textContent = '₹' + val.toFixed(2);
+                } else {
+                    display.textContent = '₹0.00';
+                }
+            });
+        }
+    }
+
+    function validateSplitTotal() {
+        const amount = parseFloat(document.getElementById('id_amount').value) || 0;
+        const splitType = document.getElementById('id_split_type').value;
+        const checkedMembers = Array.from(document.querySelectorAll('input[name="split_members"]:checked')).map(el => el.value);
+        const errorBanner = document.getElementById('splitErrorBanner');
+        
+        if (amount <= 0.00) {
+            errorBanner.textContent = '❌ Expense total amount must be positive!';
+            errorBanner.style.display = 'block';
+            errorBanner.scrollIntoView({ behavior: 'smooth' });
+            return false;
+        }
+
+        if (checkedMembers.length === 0) {
+            errorBanner.textContent = '❌ You must select at least one member to split the expense with!';
+            errorBanner.style.display = 'block';
+            errorBanner.scrollIntoView({ behavior: 'smooth' });
+            return false;
+        }
+
+        if (splitType === 'exact') {
+            let totalAllocated = 0;
+            checkedMembers.forEach(id => {
+                const input = document.querySelector('input[name="split_amount_' + id + '"]');
+                totalAllocated += parseFloat(input.value) || 0;
+            });
+            if (Math.abs(amount - totalAllocated) > 0.01) {
+                errorBanner.textContent = `❌ The sum of exact split amounts (₹${totalAllocated.toFixed(2)}) must equal the total expense amount (₹${amount.toFixed(2)})!`;
+                errorBanner.style.display = 'block';
+                errorBanner.scrollIntoView({ behavior: 'smooth' });
+                return false;
+            }
+        }
+        else if (splitType === 'percentage') {
+            let totalPct = 0;
+            checkedMembers.forEach(id => {
+                const input = document.querySelector('input[name="split_pct_' + id + '"]');
+                totalPct += parseFloat(input.value) || 0;
+            });
+            if (Math.abs(100.0 - totalPct) > 0.01) {
+                errorBanner.textContent = `❌ The sum of percentages (${totalPct.toFixed(1)}%) must equal exactly 100%!`;
+                errorBanner.style.display = 'block';
+                errorBanner.scrollIntoView({ behavior: 'smooth' });
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // Dynamic ajax loading helper for changing groups
+    function loadGroupMembers(groupId) {
+        if (!groupId) {
+            // Reload page or reset to default friends list splits
+            window.location.reload();
+            return;
+        }
+        // Redirect to same URL with group parameter to query correct candidate users
+        window.location.href = window.location.pathname + '?group=' + groupId;
+    }
+</script>
+{% endblock %}

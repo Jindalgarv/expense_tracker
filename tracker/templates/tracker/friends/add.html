@@ -1,0 +1,73 @@
+{% extends 'tracker/base.html' %}
+{% load splitwise_tags %}
+
+{% block title %}Add Friend{% endblock %}
+
+{% block content %}
+<div class="page-header animate-slide-up">
+    <div>
+        <h1>👥 Add Friend</h1>
+        <div class="page-subtitle">Search for friends on SplitWise and invite them.</div>
+    </div>
+    <div>
+        <a href="{% url 'friends_list' %}" class="btn btn-outline">
+            ⬅️ Back to Friends
+        </a>
+    </div>
+</div>
+
+<div class="animate-slide-up" style="max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-xl);">
+    <!-- Search Card -->
+    <div class="card card-glass">
+        <div class="card-body">
+            <form method="POST" style="display: flex; gap: var(--space-sm); align-items: stretch;">
+                {% csrf_token %}
+                <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: var(--space-xs); margin-bottom: 0;">
+                    <input type="text" name="query" value="{{ query }}" placeholder="Search by username, email, or full name..." class="form-input" required style="width: 100%;">
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    🔍 Search
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Card -->
+    {% if query %}
+    <div class="card card-glass">
+        <div class="card-header">
+            <h2>Search Results</h2>
+            <span class="text-muted" style="font-size: 0.85rem;">Found {{ results|length }} users</span>
+        </div>
+        <div class="card-body" style="padding: 0;">
+            {% if results %}
+                <div style="display: flex; flex-direction: column;">
+                    {% for res in results %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-color);">
+                        <div style="display: flex; align-items: center; gap: var(--space-md);">
+                            <div class="avatar avatar-md" style="background-color: {{ res|avatar_color }}; color: #0f1117; font-weight: 700;">
+                                {{ res|initials }}
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.95rem;">{{ res.get_full_name|default:res.username }}</div>
+                                <div class="text-muted" style="font-size: 0.75rem;">@{{ res.username }} • {{ res.email }}</div>
+                            </div>
+                        </div>
+                        <a href="{% url 'send_friend_request' res.id %}" class="btn btn-primary btn-sm">
+                            👥 Add Friend
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="empty-state" style="text-align: center; padding: var(--space-xl) var(--space-md); color: var(--text-secondary);">
+                    <div style="font-size: 2.5rem; margin-bottom: var(--space-sm);">🔍</div>
+                    <h4>No users found matching "{{ query }}"</h4>
+                    <p style="font-size: 0.85rem; margin-top: 4px;">Double check the username or email spelling.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
