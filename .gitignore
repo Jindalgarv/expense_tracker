@@ -22,3 +22,7 @@ ENV/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Collected static files
+staticfiles/
+
