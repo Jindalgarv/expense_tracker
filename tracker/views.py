@@ -928,6 +928,8 @@ def google_callback(request):
             created = True
 
         # Log user in
+        if not hasattr(user, 'backend'):
+            user.backend = 'django.contrib.auth.backends.ModelBackend'
         auth_login(request, user)
         if created:
             messages.success(request, f'Welcome to SplitLite, {user.first_name or user.username}! Google account registered successfully.')

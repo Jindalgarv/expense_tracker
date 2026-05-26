@@ -70,7 +70,8 @@ DATABASES = {
 
 # Use PostgreSQL if DATABASE_URL environment variable is set (typical for Heroku/Render)
 if os.environ.get('DATABASE_URL'):
-    DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=True)
+    DATABASES['default'] = dj_database_url.config(conn_max_age=600, ssl_require=False)
+
 
 
 AUTH_PASSWORD_VALIDATORS = [
