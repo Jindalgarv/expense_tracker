@@ -4,6 +4,12 @@ Django settings for expense_tracker project.
 from pathlib import Path
 from decouple import config
 import os
+import mimetypes
+
+# Force Python to recognize CSS and JS MIME types in minimal container environments
+mimetypes.add_type("text/css", ".css", True)
+mimetypes.add_type("application/javascript", ".js", True)
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
