@@ -109,9 +109,19 @@ class GroupForm(forms.ModelForm):
             }),
         }
 
+class UserModelChoiceField(forms.ModelChoiceField):
+    """Custom ModelChoiceField to display full name instead of just username."""
+    def label_from_instance(self, obj):
+        return obj.get_full_name() or obj.username
+
 
 class ExpenseForm(forms.ModelForm):
     """Form for creating and editing expenses."""
+    paid_by = UserModelChoiceField(
+        queryset=User.objects.none(),
+        empty_label=None,
+        widget=forms.Select(attrs={'class': 'form-input'})
+    )
 
     class Meta:
         model = Expense
@@ -148,15 +158,13 @@ class ExpenseForm(forms.ModelForm):
         self.fields['category'].empty_label = 'No category'
         
         # Setup paid_by field
-        self.fields['paid_by'].widget.attrs.update({'class': 'form-input'})
-        self.fields['paid_by'].empty_label = None  # Someone must pay
         if user_choices is not None:
             self.fields['paid_by'].queryset = user_choices
 
 
 class SettlementForm(forms.Form):
     """Form for recording a settlement payment between friends."""
-    to_user = forms.ModelChoiceField(
+    to_user = UserModelChoiceField(
         queryset=User.objects.none(),
         label='Pay to',
         widget=forms.Select(attrs={
