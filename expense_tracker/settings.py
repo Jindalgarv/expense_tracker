@@ -126,5 +126,10 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 LOGIN_URL = '/accounts/login/'
 
+# Session Persistence (Keep users logged in)
+SESSION_COOKIE_AGE = 2592000  # 30 days in seconds
+SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+SESSION_SAVE_EVERY_REQUEST = True
+
 # Email (use env vars in production)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
