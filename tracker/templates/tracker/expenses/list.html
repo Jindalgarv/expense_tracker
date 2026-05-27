@@ -16,7 +16,46 @@
     </div>
 </div>
 
+<!-- ── This Month Summary ── -->
+<div class="animate-slide-up" style="max-width: 900px; margin: 0 auto 1.5rem; display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-md);">
+
+    <!-- Card 1: My spending (my share of what I paid) -->
+    <div class="card card-glass" style="padding: var(--space-lg); display: flex; flex-direction: column; gap: 6px; border-top: 3px solid var(--color-primary);">
+        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
+            🧾 I Spent ({{ month_name }})
+        </div>
+        <div style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.55rem; color: var(--color-primary);">
+            {{ my_expense_share|currency }}
+        </div>
+        <div style="font-size: 0.72rem; color: var(--text-disabled);">Your share of expenses you paid</div>
+    </div>
+
+    <!-- Card 2: I owe others -->
+    <div class="card card-glass" style="padding: var(--space-lg); display: flex; flex-direction: column; gap: 6px; border-top: 3px solid var(--color-negative);">
+        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
+            💸 I Owe Others ({{ month_name }})
+        </div>
+        <div style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.55rem; color: var(--color-negative);">
+            {{ owed_to_others_share|currency }}
+        </div>
+        <div style="font-size: 0.72rem; color: var(--text-disabled);">Your share in others' expenses</div>
+    </div>
+
+    <!-- Card 3: Total -->
+    <div class="card card-glass" style="padding: var(--space-lg); display: flex; flex-direction: column; gap: 6px; border-top: 3px solid #5f27cd;">
+        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
+            📊 Total ({{ month_name }})
+        </div>
+        <div style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.55rem; color: #a29bfe;">
+            {{ total_monthly|currency }}
+        </div>
+        <div style="font-size: 0.72rem; color: var(--text-disabled);">Combined personal spend this month</div>
+    </div>
+
+</div>
+
 <!-- Filters Bar Card -->
+
 <div class="card card-glass mb-4 animate-slide-up" style="max-width: 900px; margin: 0 auto 1.5rem;">
     <div class="card-body" style="padding: var(--space-md);">
         <form method="GET" style="display: flex; gap: var(--space-sm); align-items: flex-end; flex-wrap: wrap;">

@@ -500,6 +500,9 @@ def reset_group_invite_link(request, group_id):
 @login_required
 def expense_list(request):
     """List all expenses the user is involved in."""
+    from datetime import date
+    from decimal import Decimal
+
     expenses = Expense.objects.filter(
         Q(paid_by=request.user) | Q(splits__user=request.user)
     ).distinct().order_by('-date')
@@ -515,14 +518,43 @@ def expense_list(request):
     categories = Category.objects.all()
     groups = Group.objects.filter(memberships__user=request.user)
 
+    # ── This month's summary ──────────────────────────────────────
+    today = date.today()
+    month_start = today.replace(day=1)
+
+    # My share of expenses I PAID this month
+    # = sum of my own split amounts on expenses where I am the payer
+    my_splits_on_my_expenses = ExpenseSplit.objects.filter(
+        user=request.user,
+        expense__paid_by=request.user,
+        expense__date__gte=month_start,
+    ).aggregate(total=Sum('amount_owed'))['total'] or Decimal('0')
+
+    # My share of expenses OTHERS paid this month (what I owe others)
+    my_splits_on_others_expenses = ExpenseSplit.objects.filter(
+        user=request.user,
+        expense__date__gte=month_start,
+    ).exclude(expense__paid_by=request.user).aggregate(
+        total=Sum('amount_owed')
+    )['total'] or Decimal('0')
+
+    total_monthly = my_splits_on_my_expenses + my_splits_on_others_expenses
+    month_name = today.strftime('%B')
+
     context = {
         'expenses': expenses[:50],
         'categories': categories,
         'groups': groups,
         'selected_category': category_id,
         'selected_group': group_id,
+        # Monthly stats
+        'my_expense_share': my_splits_on_my_expenses,
+        'owed_to_others_share': my_splits_on_others_expenses,
+        'total_monthly': total_monthly,
+        'month_name': month_name,
     }
     return render(request, 'tracker/expenses/list.html', context)
+
 
 
 @login_required
