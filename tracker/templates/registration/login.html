@@ -35,7 +35,25 @@
             <div style="text-align: center; margin-bottom: var(--space-lg);">
                 <!-- Logo -->
                 <div style="display: inline-flex; align-items: center; gap: var(--space-xs); font-family: 'Outfit', sans-serif; font-size: 1.8rem; font-weight: 700; color: var(--text-primary); margin-bottom: var(--space-sm);">
-                    <span style="font-size: 2.2rem;">💸</span>
+                    <svg class="brand-logo-svg large" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="logo-yellow-grad-login" x1="50" y1="18" x2="50" y2="48" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#F9D423" />
+                                <stop offset="100%" stop-color="#F1A91A" />
+                            </linearGradient>
+                            <linearGradient id="logo-blue-grad-login" x1="18" y1="36" x2="46" y2="80" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#4ebee9" />
+                                <stop offset="100%" stop-color="#2c82c9" />
+                            </linearGradient>
+                            <linearGradient id="logo-red-grad-login" x1="54" y1="36" x2="82" y2="80" gradientUnits="userSpaceOnUse">
+                                <stop offset="0%" stop-color="#ff7675" />
+                                <stop offset="100%" stop-color="#E72E25" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M50 18 L78 33 L50 48 L22 33 Z" fill="url(#logo-yellow-grad-login)" />
+                        <path d="M18 36 L46 51 L46 80 L18 65 Z" fill="url(#logo-blue-grad-login)" />
+                        <path d="M54 51 L82 36 L82 65 L54 80 Z" fill="url(#logo-red-grad-login)" />
+                    </svg>
                     <span>Split<span style="color: var(--color-primary);">Lite</span></span>
                 </div>
                 <h2 style="font-size: 1.25rem; font-weight: 600; color: var(--text-primary);">Welcome back</h2>
@@ -87,6 +105,7 @@
         </div>
     </div>
 
+    <script src="{% static 'tracker/js/app.js' %}"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});

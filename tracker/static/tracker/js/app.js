@@ -5,6 +5,62 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
+  // ─── 0. Launch Splash Screen ────────────────────────────────
+  const splashPlayed = sessionStorage.getItem('splitlite_splash_played');
+  if (!splashPlayed) {
+    const splash = document.createElement('div');
+    splash.className = 'splash-overlay';
+    splash.id = 'appSplash';
+    splash.innerHTML = `
+      <div class="splash-content">
+        <div class="splash-logo-container">
+          <svg class="brand-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="logo-yellow-grad-splash" x1="50" y1="18" x2="50" y2="48" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#F9D423" />
+                <stop offset="100%" stop-color="#F1A91A" />
+              </linearGradient>
+              <linearGradient id="logo-blue-grad-splash" x1="18" y1="36" x2="46" y2="80" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#4ebee9" />
+                <stop offset="100%" stop-color="#2c82c9" />
+              </linearGradient>
+              <linearGradient id="logo-red-grad-splash" x1="54" y1="36" x2="82" y2="80" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#ff7675" />
+                <stop offset="100%" stop-color="#E72E25" />
+              </linearGradient>
+            </defs>
+            <path d="M50 18 L78 33 L50 48 L22 33 Z" fill="url(#logo-yellow-grad-splash)" />
+            <path d="M18 36 L46 51 L46 80 L18 65 Z" fill="url(#logo-blue-grad-splash)" />
+            <path d="M54 51 L82 36 L82 65 L54 80 Z" fill="url(#logo-red-grad-splash)" />
+          </svg>
+        </div>
+        <h1 class="splash-title">Split<span>Lite</span></h1>
+        <p class="splash-credits">made with <span class="heart-pulse">🤍</span> by garv</p>
+      </div>
+    `;
+    document.body.appendChild(splash);
+
+    // Disable scrolling during splash
+    document.body.style.overflow = 'hidden';
+
+    // Start transition to hide after 1.5 seconds
+    setTimeout(function () {
+      splash.style.opacity = '0';
+      splash.style.pointerEvents = 'none';
+      
+      // Restore scrolling
+      document.body.style.overflow = '';
+      
+      // Completely remove element from DOM after fade animation (0.5s)
+      setTimeout(function () {
+        splash.remove();
+      }, 500);
+    }, 1500);
+
+    // Mark as played for the current session
+    sessionStorage.setItem('splitlite_splash_played', 'true');
+  }
+
   // ─── 1. Sidebar Toggle (Mobile) ─────────────────────────────
   const sidebar = document.querySelector('.sidebar');
   const overlay = document.querySelector('.sidebar-overlay');

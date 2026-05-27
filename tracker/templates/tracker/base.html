@@ -23,7 +23,25 @@
         <!-- Sidebar -->
         <aside class="sidebar" id="sidebar">
             <a href="{% url 'dashboard' %}" class="sidebar-logo">
-                <div class="logo-icon">💸</div>
+                <svg class="brand-logo-svg" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logo-yellow-grad" x1="50" y1="18" x2="50" y2="48" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#F9D423" />
+                            <stop offset="100%" stop-color="#F1A91A" />
+                        </linearGradient>
+                        <linearGradient id="logo-blue-grad" x1="18" y1="36" x2="46" y2="80" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#4ebee9" />
+                            <stop offset="100%" stop-color="#2c82c9" />
+                        </linearGradient>
+                        <linearGradient id="logo-red-grad" x1="54" y1="36" x2="82" y2="80" gradientUnits="userSpaceOnUse">
+                            <stop offset="0%" stop-color="#ff7675" />
+                            <stop offset="100%" stop-color="#E72E25" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M50 18 L78 33 L50 48 L22 33 Z" fill="url(#logo-yellow-grad)" />
+                    <path d="M18 36 L46 51 L46 80 L18 65 Z" fill="url(#logo-blue-grad)" />
+                    <path d="M54 51 L82 36 L82 65 L54 80 Z" fill="url(#logo-red-grad)" />
+                </svg>
                 <span class="logo-text">SplitLite</span>
             </a>
             
