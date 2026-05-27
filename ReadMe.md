@@ -5,14 +5,8 @@ A premium, elegant, and mobile-responsive group expense-splitting PWA (inspired 
 Developed and designed with 🤍 by **Garv Jindal**.
 
 ---
-
-## 🎨 Premium Brand Identity
-SplitLite features a custom-designed **floating 3D isometric brand logo** representing cooperation, ledger balancing, and collaborative finance. 
-
 ![SplitLite Logo](tracker/static/tracker/icon-512.png)
 
-Every launch displays a native-style fullscreen **launch splash screen** presenting:
-> **made with 🤍 by garv**
 
 ---
 
