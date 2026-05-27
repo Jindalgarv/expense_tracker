@@ -270,7 +270,7 @@ def send_reminder(request, friend_id):
         link=f'/friends/{request.user.id}/'
     )
     
-    messages.success(request, "Sarcastic reminder sent successfully! 😈")
+    messages.success(request, "Reminder sent!")
     return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
 
 
