@@ -1,94 +1,111 @@
-# 💰 Expense Tracker
+# 💸 SplitLite
 
-A simple **web-based Expense Tracker** built using **Django** that helps users record, manage, and visualize their daily expenses efficiently.
+A premium, elegant, and mobile-responsive group expense-splitting PWA (inspired by Splitwise). Designed with modern dark glassmorphism, native-feeling micro-animations, and a robust backend engine to split bills, track friendships, simplify group debts, and resolve expenses in seconds.
 
----
-
-## 🚀 Features
-
-- Add, edit, and delete expenses  
-- Categorize expenses  
-- View expense history  
-- User-friendly UI  
-- Persistent storage using SQLite  
-- Static files handled properly for deployment  
+Developed and designed with 🤍 by **Garv Jindal**.
 
 ---
 
-## 🛠 Tech Stack
+## 🎨 Premium Brand Identity
+SplitLite features a custom-designed **floating 3D isometric brand logo** representing cooperation, ledger balancing, and collaborative finance. 
 
-**Backend**
-- Python  
-- Django  
+![SplitLite Logo](tracker/static/tracker/icon-512.png)
 
-**Frontend**
-- HTML  
-- CSS  
-- JavaScript  
-
-**Database**
-- SQLite (default Django DB)
+Every launch displays a native-style fullscreen **launch splash screen** presenting:
+> **made with 🤍 by garv**
 
 ---
 
-expense_tracker/
-│
-├── tracker/ # Main Django app
-├── staticfiles/ # Collected static files
-├── db.sqlite3 # Database
-├── manage.py # Django management script
-├── requirements.txt # Project dependencies
-└── README.md # Project documentation
+## 🚀 Key Features
 
+* **Precision Math Splitting Engine**: Split bills equally, by exact amounts, by percentage, or by custom share ratios. Includes protection against decimal rounding drift (assigning remainder cents to the payer).
+* **Greedy Debt Simplification**: A robust matrix algorithm that matches all group debtors and creditors, simplifying net outstanding balances into the absolute minimum number of peer-to-peer transfers.
+* **Self-Contained Google OAuth2 SSO**: Secure, zero-dependency one-click social authentication running purely on Python standard libraries without external package bloat.
+* **Progressive Web App (PWA)**: Installed directly on iOS and Android with maskable high-res logos, service-worker caching, offline readiness, and custom standalone status bar configurations.
+* **Launch Splash Screen**: Dynamic fullscreen session launch overlay `#0f1117` complete with scaling logo spring entries, staggered fade-ins, and a looping, glowing pulsing heart `🤍`.
+* **Analytics & Timelines**: Seamless activity feeds tracking group logs, friendly ledger balances, and comprehensive monthly category distribution charts.
 
 ---
 
-## ⚙️ Installation & Setup
+## 🛠️ Technology Stack
 
-### 1️⃣ Clone the repository
+* **Backend**: Python, Django 5.1.4, WhiteNoise (static handling), Gunicorn
+* **Frontend**: HTML5 Semantic Structure, Vanilla CSS (Custom Design Token System), Vanilla ES6 JavaScript
+* **Database**: SQLite (Development), PostgreSQL (Production)
+* **Hosting**: Railway (Auto-deployment pipeline synced with GitHub)
+
+---
+
+## ⚙️ Installation & Local Setup
+
+### 1️⃣ Clone the Repository
 ```bash
-git clone https://github.com/Jindalgarv/expense_tracker.git
-cd expense_tracker
-python -m venv venv
-source venv/bin/activate   # On Windows: venv\Scripts\activate
-2️⃣ Create a virtual environment
-python -m venv venv
-source venv/bin/activate   # On Windows: venv\Scripts\activate
+git clone https://github.com/Jindalgarv/splitlite.git
+cd splitlite
+```
 
-3️⃣ Install dependencies
+### 2️⃣ Configure Environment Variables
+Create a `.env` file in the root folder:
+```env
+DEBUG=True
+SECRET_KEY="your-local-django-secret-key"
+GOOGLE_CLIENT_ID="your-google-oauth-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-google-oauth-client-secret"
+```
+
+### 3️⃣ Create Virtual Environment & Install Dependencies
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
+```
 
-4️⃣ Run migrations
+### 4️⃣ Set Up database & Seed Categories
+```bash
 python manage.py migrate
+python manage.py seed_categories
+```
 
-5️⃣ Start the development server
+### 5️⃣ Boot the Local Server
+```bash
 python manage.py runserver
+```
+Visit the local dashboard at **`http://127.0.0.1:8000/`**!
 
-6️⃣ Open in browser
-http://127.0.0.1:8000/
+---
 
-📌 Future Improvements
+## 🧪 Running Automated Tests
+The application is backed by an automated Django unit-testing suite covering split mathematical edge cases, friendship validations, and authentication routes:
+```bash
+python manage.py test
+```
 
-User authentication
+---
 
-Monthly and yearly expense analytics
+## 🚀 One-Click Railway Production Deployment
 
-Charts and visualizations
+This project is fully optimized for containerized cloud deployment on **Railway** via `railway.json` and a production-grade `Procfile`:
 
-Export expenses to CSV/PDF
+1. Sign in to **Railway.app** using your GitHub account.
+2. Click **New Project** and provision a cloud **PostgreSQL** database.
+3. Add a **GitHub Web Service** and select this repository.
+4. Inject the environment variables inside Railway's service panel:
+   * `DATABASE_URL` ➡️ `${{Postgres.DATABASE_URL}}`
+   * `SECRET_KEY` ➡️ *[Your secure production secret key]*
+   * `DEBUG` ➡️ `False`
+   * `GOOGLE_CLIENT_ID` ➡️ *[Your Google OAuth ID]*
+   * `GOOGLE_CLIENT_SECRET` ➡️ *[Your Google OAuth Secret]*
+5. Add your custom domain (e.g. `splitlite.up.railway.app`) to your Google Cloud Console authorized redirect URIs:
+   `https://splitlite.up.railway.app/accounts/google/callback/`
 
-🤝 Contributing
+---
 
-Contributions are welcome!
-Feel free to fork the repository and submit a pull request.
-📄 License
+## 🤝 Contributing
+Contributions, feature recommendations, and pull requests are highly welcome! Feel free to open issues or suggest design changes.
 
-This project is open-source and available under the MIT License.
+## 📄 License
+This project is open-source and licensed under the MIT License.
 
-✨ Author
-
-Jindal Garv
-GitHub: https://github.com/Jindalgarv
-
-## 📂 Project Structure
-
+## ✨ Author
+**Garv Jindal**  
+* GitHub: [@Jindalgarv](https://github.com/Jindalgarv)
