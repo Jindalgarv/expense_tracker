@@ -77,18 +77,8 @@
                 {{ form.category }}
             </div>
 
-            <!-- Group (if not already set via GET parameter) -->
-            {% if not group %}
-            <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
-                <label for="group_select" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Group (Optional)</label>
-                <select name="group" id="group_select" class="form-select" onchange="loadGroupMembers(this.value)" style="width: 100%; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.6rem; border-radius: var(--radius-md);">
-                    <option value="">Non-group Expense (splits with friends)</option>
-                    {% for gp in groups_list %}
-                    <option value="{{ gp.id }}">{{ gp.get_type_display_icon }} {{ gp.name }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            {% else %}
+            <!-- Group -->
+            {% if group %}
             <input type="hidden" name="group" value="{{ group.id }}">
             {% endif %}
 
