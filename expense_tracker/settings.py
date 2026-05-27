@@ -106,6 +106,10 @@ STORAGES = {
     },
 }
 
+# Let WhiteNoise find static files via Django's finders at runtime
+# This guarantees files are served even if collectstatic has issues
+WHITENOISE_USE_FINDERS = True
+
 
 # Media files (user uploads)
 MEDIA_URL = '/media/'
