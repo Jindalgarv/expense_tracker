@@ -106,6 +106,15 @@
                             <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; margin: 0; flex: 1;">
                                 <input type="checkbox" name="split_members" value="{{ member.id }}"
                                     {% if member == user %}checked{% endif %}
+                                    {% if member == user and not group %}
+                                    onclick="
+                                        const banner = document.getElementById('splitErrorBanner');
+                                        banner.textContent = 'You must be included in your own non-group expenses.';
+                                        banner.style.display = 'block';
+                                        setTimeout(() => banner.style.display = 'none', 3000);
+                                        return false;
+                                    "
+                                    {% endif %}
                                     onchange="updateSplitInputs()" style="width: 18px; height: 18px; accent-color: var(--color-primary);">
                                 <span class="avatar avatar-sm" style="background-color: {{ member|avatar_color }}; color: #0f1117; font-weight: 700;">
                                     {{ member|initials }}
