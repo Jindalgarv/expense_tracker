@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.db.models import Q, Sum
 from django.http import HttpResponse
 from django.utils.timezone import now
+from django.views.decorators.cache import cache_control
 from decimal import Decimal
 import csv
 from io import StringIO
@@ -1011,3 +1012,20 @@ def export_csv(request):
             your_share,
         ])
     return response
+
+
+# ─────────────────────────────────────────────
+# PWA Service Worker
+# ─────────────────────────────────────────────
+
+@cache_control(max_age=0)
+def service_worker(request):
+    """Serve the service worker JS from the root scope."""
+    import os
+    sw_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)),
+        'static', 'tracker', 'sw.js'
+    )
+    with open(sw_path, 'r') as f:
+        return HttpResponse(f.read(), content_type='application/javascript')
+
