@@ -2052,7 +2052,7 @@ img {
 .grid    { display: grid !important; }
 
 .mobile-only  { display: none !important; }
-.desktop-only { display: initial !important; }
+/* .desktop-only doesn't need a base rule, it's just hidden on mobile */
 
 .relative { position: relative !important; }
 .absolute { position: absolute !important; }
@@ -2367,7 +2367,7 @@ img {
   h3 { font-size: 1.1rem; }
 
   /* Visibility */
-  .mobile-only  { display: initial !important; }
+  .mobile-only  { display: block !important; }
   .desktop-only { display: none !important; }
 
   /* Modals */
