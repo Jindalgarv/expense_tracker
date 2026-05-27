@@ -568,11 +568,22 @@ def add_expense(request):
             messages.error(request, "You're not a member of this group.")
             return redirect('group_list')
 
+    # Calculate members early so we can pass them as choices to the paid_by field
+    if group:
+        members = [m.user for m in group.memberships.select_related('user', 'user__profile').all()]
+    else:
+        members = get_friends(request.user)
+        members.append(request.user)
+
+    # Convert list of members to a queryset for the form's ModelChoiceField
+    member_ids = [m.id for m in members]
+    user_choices = User.objects.filter(id__in=member_ids)
+
     if request.method == 'POST':
-        form = ExpenseForm(request.POST)
+        form = ExpenseForm(request.POST, user_choices=user_choices)
         if form.is_valid():
             expense = form.save(commit=False)
-            expense.paid_by = request.user
+            # paid_by is now handled by the form
             expense.created_by = request.user
 
             # Set group from POST or GET
@@ -585,41 +596,41 @@ def add_expense(request):
 
             # Process splits
             split_type = expense.split_type
-            member_ids = request.POST.getlist('split_members')
-            members = list(User.objects.filter(id__in=member_ids))
+            selected_member_ids = request.POST.getlist('split_members')
+            split_members = list(User.objects.filter(id__in=selected_member_ids))
 
-            if not members:
+            if not split_members:
                 # If no members selected, default to all group members or just self
                 if expense.group:
-                    members = [m.user for m in expense.group.memberships.all()]
+                    split_members = [m.user for m in expense.group.memberships.all()]
                 else:
-                    members = [request.user]
+                    split_members = [request.user]
 
             # Ensure payer is included in splits
-            if request.user not in members:
-                members.append(request.user)
+            if expense.paid_by not in split_members:
+                split_members.append(expense.paid_by)
 
             split_data = None
             if split_type == 'exact':
                 split_data = {}
-                for member in members:
+                for member in split_members:
                     amt = request.POST.get(f'split_amount_{member.id}', '0')
                     split_data[member] = Decimal(amt)
             elif split_type == 'percentage':
                 split_data = {}
-                for member in members:
+                for member in split_members:
                     pct = request.POST.get(f'split_pct_{member.id}', '0')
                     split_data[member] = float(pct)
             elif split_type == 'shares':
                 split_data = {}
-                for member in members:
+                for member in split_members:
                     shares = request.POST.get(f'split_shares_{member.id}', '1')
                     split_data[member] = int(shares)
 
-            create_expense_splits(expense, split_type, members, split_data)
+            create_expense_splits(expense, split_type, split_members, split_data)
 
             # Notifications for involved users
-            for member in members:
+            for member in split_members:
                 if member != request.user:
                     create_notification(
                         member,
@@ -638,14 +649,7 @@ def add_expense(request):
             return redirect('dashboard')
     else:
         from datetime import date
-        form = ExpenseForm(initial={'date': date.today()})
-
-    # Get members for split selection
-    if group:
-        members = [m.user for m in group.memberships.select_related('user', 'user__profile').all()]
-    else:
-        members = get_friends(request.user)
-        members.append(request.user)
+        form = ExpenseForm(initial={'date': date.today(), 'paid_by': request.user}, user_choices=user_choices)
 
     categories = Category.objects.all()
     groups_list = Group.objects.filter(memberships__user=request.user)

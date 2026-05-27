@@ -38,6 +38,27 @@
             </div>
             {% endif %}
 
+            <!-- Paid By -->
+            <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
+                <label for="id_paid_by" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Paid By</label>
+                {{ form.paid_by }}
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        const paidBySelect = document.getElementById('id_paid_by');
+                        if (paidBySelect) {
+                            paidBySelect.addEventListener('change', function() {
+                                const payerId = this.value;
+                                const chk = document.querySelector(`input[name="split_members"][value="${payerId}"]`);
+                                if (chk && !chk.checked) {
+                                    chk.checked = true;
+                                    if (typeof updateSplitInputs === 'function') updateSplitInputs();
+                                }
+                            });
+                        }
+                    });
+                </script>
+            </div>
+
             <!-- Amount -->
             <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
                 <label for="id_amount" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Total Amount (₹)</label>
@@ -106,15 +127,16 @@
                             <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; margin: 0; flex: 1;">
                                 <input type="checkbox" name="split_members" value="{{ member.id }}"
                                     {% if member == user %}checked{% endif %}
-                                    {% if member == user and not group %}
                                     onclick="
-                                        const banner = document.getElementById('splitErrorBanner');
-                                        banner.textContent = 'You must be included in your own non-group expenses.';
-                                        banner.style.display = 'block';
-                                        setTimeout(() => banner.style.display = 'none', 3000);
-                                        return false;
+                                        const payerId = document.getElementById('id_paid_by').value;
+                                        if (this.value === payerId) {
+                                            const banner = document.getElementById('splitErrorBanner');
+                                            banner.textContent = 'The person who paid must be included in the split.';
+                                            banner.style.display = 'block';
+                                            setTimeout(() => banner.style.display = 'none', 3000);
+                                            return false;
+                                        }
                                     "
-                                    {% endif %}
                                     onchange="updateSplitInputs()" style="width: 18px; height: 18px; accent-color: var(--color-primary);">
                                 <span class="avatar avatar-sm" style="background-color: {{ member|avatar_color }}; color: #0f1117; font-weight: 700;">
                                     {{ member|initials }}

@@ -115,7 +115,7 @@ class ExpenseForm(forms.ModelForm):
 
     class Meta:
         model = Expense
-        fields = ['amount', 'date', 'category', 'split_type', 'notes']
+        fields = ['paid_by', 'amount', 'date', 'category', 'split_type', 'notes']
         widgets = {
             'amount': forms.NumberInput(attrs={
                 'class': 'form-input',
@@ -141,10 +141,17 @@ class ExpenseForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs):
+        user_choices = kwargs.pop('user_choices', None)
         super().__init__(*args, **kwargs)
         # Make category optional — user doesn't have to pick one
         self.fields['category'].required = False
         self.fields['category'].empty_label = 'No category'
+        
+        # Setup paid_by field
+        self.fields['paid_by'].widget.attrs.update({'class': 'form-input'})
+        self.fields['paid_by'].empty_label = None  # Someone must pay
+        if user_choices is not None:
+            self.fields['paid_by'].queryset = user_choices
 
 
 class SettlementForm(forms.Form):
