@@ -7,7 +7,7 @@
 <div class="page-header animate-slide-up">
     <div>
         <h1>👥 Add Friend</h1>
-        <div class="page-subtitle">Search for friends on SplitWise and invite them.</div>
+        <div class="page-subtitle">Search for friends on SplitLite and invite them.</div>
     </div>
     <div>
         <a href="{% url 'friends_list' %}" class="btn btn-outline">
@@ -17,57 +17,215 @@
 </div>
 
 <div class="animate-slide-up" style="max-width: 600px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-xl);">
+
     <!-- Search Card -->
     <div class="card card-glass">
         <div class="card-body">
-            <form method="POST" style="display: flex; gap: var(--space-sm); align-items: stretch;">
-                {% csrf_token %}
-                <div class="form-group" style="flex: 1; display: flex; flex-direction: column; gap: var(--space-xs); margin-bottom: 0;">
-                    <input type="text" name="query" value="{{ query }}" placeholder="Search by username, email, or full name..." class="form-input" required style="width: 100%;">
+            <div style="position: relative;">
+                <div style="display: flex; align-items: center; gap: var(--space-sm); background: var(--bg-elevated); border: 1px solid var(--border-color); border-radius: 12px; padding: 0 var(--space-md); transition: border-color 0.2s;" id="search-wrapper">
+                    <span style="font-size: 1.1rem; opacity: 0.6;">🔍</span>
+                    <input
+                        type="text"
+                        id="live-search-input"
+                        placeholder="Search by username, email, or full name..."
+                        autocomplete="off"
+                        style="flex: 1; background: transparent; border: none; outline: none; padding: var(--space-md) 0; color: var(--text-primary); font-size: 0.95rem; font-family: var(--font-body);"
+                    >
+                    <div id="search-spinner" style="display: none; width: 18px; height: 18px; border: 2px solid var(--border-color); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0;"></div>
                 </div>
-                <button type="submit" class="btn btn-primary">
-                    🔍 Search
-                </button>
-            </form>
+                <div id="search-hint" style="margin-top: 8px; font-size: 0.8rem; color: var(--text-secondary); padding-left: 4px;">
+                    Start typing to search...
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Results Card -->
-    {% if query %}
-    <div class="card card-glass">
-        <div class="card-header">
-            <h2>Search Results</h2>
-            <span class="text-muted" style="font-size: 0.85rem;">Found {{ results|length }} users</span>
-        </div>
-        <div class="card-body" style="padding: 0;">
-            {% if results %}
-                <div style="display: flex; flex-direction: column;">
-                    {% for res in results %}
-                    <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-color);">
-                        <div style="display: flex; align-items: center; gap: var(--space-md);">
-                            <div class="avatar avatar-md" style="background-color: {{ res|avatar_color }}; color: #0f1117; font-weight: 700;">
-                                {{ res|initials }}
-                            </div>
-                            <div>
-                                <div style="font-weight: 600; font-size: 0.95rem;">{{ res.get_full_name|default:res.username }}</div>
-                                <div class="text-muted" style="font-size: 0.75rem;">@{{ res.username }} • {{ res.email }}</div>
-                            </div>
-                        </div>
-                        <a href="{% url 'send_friend_request' res.id %}" class="btn btn-primary btn-sm">
-                            👥 Add Friend
-                        </a>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <div class="empty-state" style="text-align: center; padding: var(--space-xl) var(--space-md); color: var(--text-secondary);">
-                    <div style="font-size: 2.5rem; margin-bottom: var(--space-sm);">🔍</div>
-                    <h4>No users found matching "{{ query }}"</h4>
-                    <p style="font-size: 0.85rem; margin-top: 4px;">Double check the username or email spelling.</p>
-                </div>
-            {% endif %}
+    <!-- Live Results -->
+    <div id="results-container" style="display: none;">
+        <div class="card card-glass">
+            <div class="card-header">
+                <h2>Search Results</h2>
+                <span id="results-count" class="text-muted" style="font-size: 0.85rem;"></span>
+            </div>
+            <div class="card-body" style="padding: 0;" id="results-list">
+                <!-- Results injected by JS -->
+            </div>
         </div>
     </div>
-    {% endif %}
+
+    <!-- Empty State -->
+    <div id="empty-state" style="display: none;">
+        <div class="card card-glass">
+            <div class="card-body">
+                <div class="empty-state" style="text-align: center; padding: var(--space-xl) var(--space-md); color: var(--text-secondary);">
+                    <div style="font-size: 2.5rem; margin-bottom: var(--space-sm);">🔍</div>
+                    <h4 id="empty-state-title">No users found</h4>
+                    <p style="font-size: 0.85rem; margin-top: 4px;">Double check the username or email spelling.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </div>
+
+<style>
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+#search-wrapper:focus-within {
+    border-color: var(--primary) !important;
+    box-shadow: 0 0 0 3px rgba(29, 209, 161, 0.15);
+}
+.result-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.15s ease;
+}
+.result-item:last-child {
+    border-bottom: none;
+}
+.result-item:hover {
+    background: rgba(255,255,255,0.04);
+}
+.result-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.85rem;
+    flex-shrink: 0;
+    background: var(--primary);
+    color: #0f1117;
+}
+</style>
+
+<script>
+(function () {
+    var input = document.getElementById('live-search-input');
+    var spinner = document.getElementById('search-spinner');
+    var hint = document.getElementById('search-hint');
+    var resultsContainer = document.getElementById('results-container');
+    var resultsList = document.getElementById('results-list');
+    var resultsCount = document.getElementById('results-count');
+    var emptyState = document.getElementById('empty-state');
+    var emptyTitle = document.getElementById('empty-state-title');
+    var debounceTimer = null;
+
+    // CSRF token from cookie
+    function getCsrfToken() {
+        var name = 'csrftoken';
+        var cookies = document.cookie.split(';');
+        for (var i = 0; i < cookies.length; i++) {
+            var c = cookies[i].trim();
+            if (c.startsWith(name + '=')) return c.substring(name.length + 1);
+        }
+        return '';
+    }
+
+    // Avatar colors palette
+    var avatarColors = ['#1dd1a1','#5f27cd','#0abde3','#feca57','#ff6b6b','#48dbfb','#ff9ff3','#54a0ff'];
+    function getAvatarColor(str) {
+        var hash = 0;
+        for (var i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        return avatarColors[Math.abs(hash) % avatarColors.length];
+    }
+
+    function renderResults(data, query) {
+        resultsContainer.style.display = 'none';
+        emptyState.style.display = 'none';
+        resultsList.innerHTML = '';
+
+        if (data.results.length === 0) {
+            emptyTitle.textContent = 'No users found matching "' + query + '"';
+            emptyState.style.display = 'block';
+            return;
+        }
+
+        resultsCount.textContent = 'Found ' + data.results.length + ' user' + (data.results.length > 1 ? 's' : '');
+        resultsContainer.style.display = 'block';
+
+        data.results.forEach(function (u) {
+            var color = getAvatarColor(u.username);
+            var item = document.createElement('div');
+            item.className = 'result-item';
+            item.innerHTML =
+                '<div style="display: flex; align-items: center; gap: var(--space-md);">' +
+                    '<div class="result-avatar" style="background:' + color + ';">' + (u.initials || u.username.slice(0,2).toUpperCase()) + '</div>' +
+                    '<div>' +
+                        '<div style="font-weight: 600; font-size: 0.95rem;">' + escapeHtml(u.full_name) + '</div>' +
+                        '<div class="text-muted" style="font-size: 0.75rem;">@' + escapeHtml(u.username) + ' • ' + escapeHtml(u.email) + '</div>' +
+                    '</div>' +
+                '</div>' +
+                '<a href="' + u.add_url + '" class="btn btn-primary btn-sm">👥 Add</a>';
+            resultsList.appendChild(item);
+        });
+    }
+
+    function escapeHtml(str) {
+        var d = document.createElement('div');
+        d.textContent = str;
+        return d.innerHTML;
+    }
+
+    function doSearch(query) {
+        spinner.style.display = 'block';
+        hint.style.display = 'none';
+
+        fetch('/friends/search/?q=' + encodeURIComponent(query), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            spinner.style.display = 'none';
+            renderResults(data, query);
+        })
+        .catch(function () {
+            spinner.style.display = 'none';
+            hint.style.display = 'block';
+            hint.textContent = 'Something went wrong. Please try again.';
+        });
+    }
+
+    input.addEventListener('input', function () {
+        var query = input.value.trim();
+        clearTimeout(debounceTimer);
+
+        if (query.length === 0) {
+            resultsContainer.style.display = 'none';
+            emptyState.style.display = 'none';
+            hint.style.display = 'block';
+            hint.textContent = 'Start typing to search...';
+            spinner.style.display = 'none';
+            return;
+        }
+
+        if (query.length < 2) {
+            resultsContainer.style.display = 'none';
+            emptyState.style.display = 'none';
+            hint.style.display = 'block';
+            hint.textContent = 'Type at least 2 characters...';
+            spinner.style.display = 'none';
+            return;
+        }
+
+        hint.style.display = 'none';
+        spinner.style.display = 'block';
+
+        // Debounce: wait 300ms after last keypress before firing request
+        debounceTimer = setTimeout(function () {
+            doSearch(query);
+        }, 300);
+    });
+
+    // Auto-focus the input on page load
+    input.focus();
+})();
+</script>
+
 {% endblock %}

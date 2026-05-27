@@ -181,5 +181,135 @@
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
     </script>
+    <!-- ══ PWA Install Banner ══ -->
+    <div id="pwa-install-banner" style="
+        display: none;
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 9999;
+        padding: 16px 20px;
+        background: linear-gradient(135deg, #1a1d27 0%, #252836 100%);
+        border-top: 1px solid rgba(29,209,161,0.35);
+        box-shadow: 0 -8px 40px rgba(0,0,0,0.5);
+        backdrop-filter: blur(20px);
+        animation: slideUpBanner 0.4s cubic-bezier(.16,1,.3,1);
+    ">
+        <div style="max-width: 520px; margin: 0 auto; display: flex; align-items: center; gap: 14px;">
+            <!-- App icon -->
+            <div style="
+                width: 52px; height: 52px; border-radius: 14px;
+                background: linear-gradient(135deg, #1dd1a1, #0abde3);
+                display: flex; align-items: center; justify-content: center;
+                font-size: 1.5rem; flex-shrink: 0;
+                box-shadow: 0 4px 16px rgba(29,209,161,0.35);
+            ">💰</div>
+
+            <!-- Text -->
+            <div style="flex: 1; min-width: 0;">
+                <div style="font-weight: 700; font-size: 0.95rem; color: #e2e8f0; font-family: 'Outfit', sans-serif; white-space: nowrap;">Install SplitLite</div>
+                <div id="pwa-banner-subtitle" style="font-size: 0.78rem; color: #94a3b8; margin-top: 3px; line-height: 1.4;">Add to your home screen for a faster, app-like experience.</div>
+            </div>
+
+            <!-- Action buttons -->
+            <div style="display: flex; flex-direction: column; gap: 6px; flex-shrink: 0;">
+                <button id="pwa-install-btn" style="
+                    background: linear-gradient(135deg, #1dd1a1, #0abde3);
+                    color: #0f1117; border: none; border-radius: 8px;
+                    padding: 8px 16px; font-weight: 700; font-size: 0.82rem;
+                    cursor: pointer; white-space: nowrap; font-family: inherit;
+                    box-shadow: 0 2px 10px rgba(29,209,161,0.4); transition: transform 0.15s;
+                ">📲 Install</button>
+                <button id="pwa-dismiss-btn" style="
+                    background: transparent; color: #64748b;
+                    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+                    padding: 5px 16px; font-size: 0.78rem;
+                    cursor: pointer; white-space: nowrap; font-family: inherit;
+                ">Not now</button>
+            </div>
+        </div>
+
+        <!-- iOS step-by-step guide (shown when Install tapped on iOS) -->
+        <div id="ios-guide" style="display: none; margin-top: 14px; padding: 12px 14px; background: rgba(255,255,255,0.05); border-radius: 10px; font-size: 0.8rem; color: #94a3b8; line-height: 1.9; border: 1px solid rgba(255,255,255,0.08);">
+            <strong style="color: #e2e8f0;">How to install on iPhone / iPad:</strong><br>
+            1️⃣ Tap the <strong style="color: #0abde3;">Share</strong> button (⬆️) in the Safari toolbar<br>
+            2️⃣ Scroll down and tap <strong style="color: #0abde3;">"Add to Home Screen"</strong><br>
+            3️⃣ Tap <strong style="color: #1dd1a1;">Add</strong> — done! 🎉
+        </div>
+    </div>
+
+    <style>
+    @keyframes slideUpBanner {
+        from { transform: translateY(110%); opacity: 0; }
+        to   { transform: translateY(0);   opacity: 1; }
+    }
+    #pwa-install-btn:hover { transform: translateY(-1px); }
+    </style>
+
+    <script>
+    (function () {
+        /* Skip if app is already installed (running in standalone/fullscreen mode) */
+        var isInstalled =
+            window.matchMedia('(display-mode: standalone)').matches ||
+            window.matchMedia('(display-mode: fullscreen)').matches ||
+            window.navigator.standalone === true;
+        if (isInstalled) return;
+
+        /* Only show on mobile devices */
+        var isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
+        if (!isMobile) return;
+
+        /* Respect user dismissal — don't show again for 7 days */
+        var dismissedAt = localStorage.getItem('splitlite_banner_dismissed');
+        if (dismissedAt && Date.now() - parseInt(dismissedAt) < 7 * 24 * 60 * 60 * 1000) return;
+
+        var banner     = document.getElementById('pwa-install-banner');
+        var installBtn = document.getElementById('pwa-install-btn');
+        var dismissBtn = document.getElementById('pwa-dismiss-btn');
+        var iosGuide   = document.getElementById('ios-guide');
+        var subtitle   = document.getElementById('pwa-banner-subtitle');
+
+        var isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent) && !window.MSStream;
+        var isSafari = isIOS && /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+        var deferredPrompt = null;
+
+        /* ── Android/Chrome: capture beforeinstallprompt ── */
+        window.addEventListener('beforeinstallprompt', function (e) {
+            e.preventDefault();
+            deferredPrompt = e;
+            setTimeout(function () { banner.style.display = 'block'; }, 3000);
+        });
+
+        /* ── iOS Safari: show manual instructions ── */
+        if (isSafari) {
+            subtitle.textContent = 'Open in Safari and tap the Share button to add to your Home Screen.';
+            installBtn.innerHTML = '📋 How to Install';
+            setTimeout(function () { banner.style.display = 'block'; }, 3000);
+            installBtn.addEventListener('click', function () {
+                iosGuide.style.display = iosGuide.style.display === 'none' ? 'block' : 'none';
+            });
+        } else if (!isIOS) {
+            /* ── Android: native prompt ── */
+            installBtn.addEventListener('click', function () {
+                if (!deferredPrompt) return;
+                banner.style.display = 'none';
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(function (choice) {
+                    if (choice.outcome === 'accepted') {
+                        localStorage.setItem('splitlite_banner_dismissed', Date.now());
+                    }
+                    deferredPrompt = null;
+                });
+            });
+        }
+
+        /* ── Dismiss: remember for 7 days ── */
+        dismissBtn.addEventListener('click', function () {
+            banner.style.display = 'none';
+            localStorage.setItem('splitlite_banner_dismissed', Date.now());
+        });
+    })();
+    </script>
+
 </body>
+
 </html>

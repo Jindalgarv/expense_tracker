@@ -5,7 +5,7 @@ from django.contrib.auth import login as auth_login
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.db.models import Q, Sum
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.utils.timezone import now
 from django.views.decorators.cache import cache_control
 from decimal import Decimal
@@ -107,6 +107,46 @@ def add_friend(request):
             ).exclude(id__in=exclude_ids)[:10]
 
     return render(request, 'tracker/friends/add.html', {'results': results, 'query': query})
+
+
+@login_required
+def search_friends_api(request):
+    """Live JSON search endpoint for friend suggestions (called on every keypress)."""
+    query = request.GET.get('q', '').strip()
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+
+    existing_friend_ids = [f.id for f in get_friends(request.user)]
+    pending_ids = list(Friendship.objects.filter(
+        from_user=request.user, status='pending'
+    ).values_list('to_user_id', flat=True))
+    exclude_ids = existing_friend_ids + pending_ids + [request.user.id]
+
+    users = User.objects.filter(
+        Q(username__icontains=query) |
+        Q(email__icontains=query) |
+        Q(first_name__icontains=query) |
+        Q(last_name__icontains=query)
+    ).exclude(id__in=exclude_ids)[:10]
+
+    data = []
+    for u in users:
+        full_name = u.get_full_name()
+        initials = ''
+        if u.first_name and u.last_name:
+            initials = (u.first_name[0] + u.last_name[0]).upper()
+        elif u.username:
+            initials = u.username[:2].upper()
+        data.append({
+            'id': u.id,
+            'username': u.username,
+            'full_name': full_name or u.username,
+            'email': u.email,
+            'initials': initials,
+            'add_url': f'/friends/request/{u.id}/',
+        })
+
+    return JsonResponse({'results': data})
 
 
 @login_required
