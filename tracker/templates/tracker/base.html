@@ -50,6 +50,12 @@
                 <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                     <span class="nav-icon">🏠</span> Dashboard
                 </a>
+                <a href="{% url 'notifications' %}" class="nav-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
+                    <span class="nav-icon">🔔</span> Notifications
+                    {% if unread_notifications_count %}
+                    <span class="nav-badge" style="background: var(--color-negative); margin-left: auto;">{{ unread_notifications_count }}</span>
+                    {% endif %}
+                </a>
                 <a href="{% url 'friends_list' %}" class="nav-link {% if 'friend' in request.resolver_match.url_name %}active{% endif %}">
                     <span class="nav-icon">👥</span> Friends
                     {% if pending_requests_count %}
@@ -108,29 +114,6 @@
                 ☰
             </button>
 
-            <!-- Top Header Bar -->
-            <div class="flex flex-between items-center mb-4 desktop-only" style="border-bottom: 1px solid var(--border-color); padding-bottom: var(--space-md); margin-top: -10px;">
-                <div></div>
-                <div class="flex items-center gap-md" style="display: flex; align-items: center; gap: var(--space-md);">
-                    <a href="{% url 'notifications' %}" class="btn btn-icon btn-ghost" id="notificationBell" style="position: relative; font-size: 1.15rem;">
-                        🔔
-                        {% if unread_notifications_count %}
-                        <span class="badge badge-negative" style="position: absolute; top: -2px; right: -2px; padding: 2px 5px; font-size: 0.6rem; min-width: 15px; border-radius: var(--radius-full);">
-                            {{ unread_notifications_count }}
-                        </span>
-                        {% endif %}
-                    </a>
-                    
-                    {% if user.is_authenticated %}
-                    <a href="{% url 'profile' %}" class="flex items-center gap-sm" style="display: flex; align-items: center; gap: var(--space-xs); text-decoration: none; color: var(--text-primary);">
-                        <div class="avatar avatar-sm" style="background-color: {{ user|avatar_color }}; color: #0f1117; font-weight: 700;">
-                            {{ user|initials }}
-                        </div>
-                        <span style="font-size: 0.85rem; font-weight: 500;">{{ user.username }}</span>
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
 
             <!-- Messages toast/notification container -->
             {% if messages %}
