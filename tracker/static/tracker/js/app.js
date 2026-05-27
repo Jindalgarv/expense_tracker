@@ -49,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Disable scrolling during splash
     document.body.style.overflow = 'hidden';
 
-    // Show for 2.5 seconds (credits animation needs ~0.6s delay + 0.8s to complete)
+    // Show for a short time (1.2s) so the app feels fast
     setTimeout(function () {
       splash.style.opacity = '0';
       splash.style.pointerEvents = 'none';
@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', function () {
       setTimeout(function () {
         splash.remove();
       }, 500);
-    }, 2500);
+    }, 1200);
 
     // Record timestamp so PWA relaunches show it again after 30 min
     localStorage.setItem(splashKey, String(now));
