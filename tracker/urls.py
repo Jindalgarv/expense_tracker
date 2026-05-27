@@ -13,6 +13,7 @@ urlpatterns = [
     path('friends/accept/<int:friendship_id>/', views.accept_friend, name='accept_friend'),
     path('friends/reject/<int:friendship_id>/', views.reject_friend, name='reject_friend'),
     path('friends/<int:user_id>/', views.friend_detail, name='friend_detail'),
+    path('friends/<int:friend_id>/remind/', views.send_reminder, name='send_reminder'),
 
     # Groups
     path('groups/', views.group_list, name='group_list'),

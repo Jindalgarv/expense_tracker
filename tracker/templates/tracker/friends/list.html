@@ -71,7 +71,12 @@
                             <div class="text-positive" style="font-weight: 600; font-size: 0.95rem;">
                                 {{ fd.balance|currency }}
                             </div>
-                            <div class="text-muted" style="font-size: 0.7rem;">owes you</div>
+                            <div class="text-muted" style="font-size: 0.7rem; display: flex; align-items: center; justify-content: flex-end; gap: 4px;">
+                                owes you
+                                <a href="{% url 'send_reminder' fd.user.id %}" title="Send Sarcastic Reminder" class="btn btn-ghost btn-sm" style="padding: 2px; color: var(--color-warning);" onclick="event.stopPropagation();">
+                                    🔔
+                                </a>
+                            </div>
                             {% elif fd.balance < 0 %}
                             <div class="text-negative" style="font-weight: 600; font-size: 0.95rem;">
                                 {{ fd.balance|abs_value|currency }}

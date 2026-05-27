@@ -31,8 +31,11 @@
         <div class="text-positive" style="font-size: 2.2rem; font-family: 'Outfit', sans-serif; font-weight: 700;">
             {{ balance|currency }}
         </div>
-        <p style="font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); margin-top: 4px;">
+        <p style="font-size: 0.95rem; font-weight: 500; color: var(--text-secondary); margin-top: 4px; display: flex; align-items: center; justify-content: center; gap: var(--space-xs);">
             {{ friend.get_full_name|default:friend.username }} owes you
+            <a href="{% url 'send_reminder' friend.id %}" title="Send Sarcastic Reminder" class="btn btn-ghost btn-sm" style="padding: 2px 6px; color: var(--color-warning);">
+                🔔 Remind
+            </a>
         </p>
         {% elif balance < 0 %}
         <div class="text-negative" style="font-size: 2.2rem; font-family: 'Outfit', sans-serif; font-weight: 700;">

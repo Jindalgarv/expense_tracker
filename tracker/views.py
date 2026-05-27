@@ -10,6 +10,7 @@ from django.utils.timezone import now
 from django.views.decorators.cache import cache_control
 from decimal import Decimal
 import csv
+import random
 from io import StringIO
 
 from .models import (
@@ -238,6 +239,39 @@ def friend_detail(request, user_id):
         'settlements': settlements,
     }
     return render(request, 'tracker/friends/detail.html', context)
+@login_required
+def send_reminder(request, friend_id):
+    """Send a sarcastic payment reminder to a friend who owes money."""
+    friend = get_object_or_404(User, id=friend_id)
+    balance = get_balance_between(request.user, friend)
+    
+    if balance <= 0:
+        messages.error(request, f"{friend.get_full_name() or friend.username} doesn't owe you anything!")
+        return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
+        
+    sarcastic_messages = [
+        f"Hey {friend.get_full_name() or friend.username}, my wallet is feeling a bit light. Coincidence? I think not. Please pay your ₹{balance} debt.",
+        f"Dear {friend.get_full_name() or friend.username}, I'm not saying I'll send the mafia, but I'd prefer if you just paid the ₹{balance} you owe me.",
+        f"Friendly reminder that you owe me ₹{balance}. Not so friendly reminder: I know where you live.",
+        f"Hey {friend.get_full_name() or friend.username}, are you hoarding wealth? Share the ₹{balance} you owe me before I report you.",
+        f"I'm accepting donations! Starting with the ₹{balance} you owe me.",
+        f"Did you forget about the ₹{balance} you owe me, or are you just pretending to have amnesia?",
+        f"Hey {friend.get_full_name() or friend.username}, just doing my daily debt collection routine. You're up! That'll be ₹{balance}.",
+        f"It's been 84 years... still waiting for that ₹{balance}, {friend.get_full_name() or friend.username}.",
+        f"I accept cash, UPI, and apologies wrapped in ₹{balance}.",
+    ]
+    
+    message = random.choice(sarcastic_messages)
+    
+    create_notification(
+        friend,
+        message,
+        notification_type='settlement',
+        link=f'/friends/{request.user.id}/'
+    )
+    
+    messages.success(request, "Sarcastic reminder sent successfully! 😈")
+    return redirect(request.META.get('HTTP_REFERER', 'dashboard'))
 
 
 # ─────────────────────────────────────────────

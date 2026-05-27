@@ -156,9 +156,17 @@
                                 </div>
                             </div>
                         </div>
-                        <span class="{% if fb.balance > 0 %}text-positive{% else %}text-negative{% endif %}" style="font-size: 0.85rem; font-weight: 600;">
-                            {{ fb.balance|abs_value|currency }}
-                        </span>
+                        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <span class="{% if fb.balance > 0 %}text-positive{% else %}text-negative{% endif %}" style="font-size: 0.85rem; font-weight: 600;">
+                                {{ fb.balance|abs_value|currency }}
+                            </span>
+                            {% if fb.balance > 0 %}
+                            <!-- Remind Button -->
+                            <a href="{% url 'send_reminder' fb.user.id %}" title="Send Sarcastic Reminder" class="btn btn-ghost btn-sm" style="padding: 4px; color: var(--color-warning);" onclick="event.stopPropagation();">
+                                🔔
+                            </a>
+                            {% endif %}
+                        </div>
                     </a>
                     {% endfor %}
                 {% else %}
