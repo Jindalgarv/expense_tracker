@@ -139,40 +139,84 @@
         {% endif %}
     </div>
 
-    <!-- Sidebar Column: Group Members List -->
-    <div class="card card-glass" style="display: flex; flex-direction: column; gap: var(--space-md);">
-        <div class="card-header flex flex-between" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
-            <h2>👥 Members</h2>
-            <a href="{% url 'add_group_member' group.id %}" class="btn btn-ghost btn-sm text-primary" style="padding: 2px 6px;">➕ Add</a>
-        </div>
-        <div class="card-body" style="padding: 0;">
-            <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
-                {% for mb in members %}
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-xs) 0;">
-                    <div style="display: flex; align-items: center; gap: var(--space-sm);">
-                        <div class="avatar avatar-sm" style="background-color: {{ mb.user|avatar_color }}; color: #0f1117; font-weight: 700;">
-                            {{ mb.user|initials }}
+    <!-- Sidebar Column -->
+    <div style="display: flex; flex-direction: column; gap: var(--space-xl);">
+        <!-- Group Members List -->
+        <div class="card card-glass" style="display: flex; flex-direction: column; gap: var(--space-md);">
+            <div class="card-header flex flex-between" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0;">
+                <h2>👥 Members</h2>
+                <a href="{% url 'add_group_member' group.id %}" class="btn btn-ghost btn-sm text-primary" style="padding: 2px 6px;">➕ Add</a>
+            </div>
+            <div class="card-body" style="padding: 0;">
+                <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                    {% for mb in members %}
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-xs) 0;">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                            <div class="avatar avatar-sm" style="background-color: {{ mb.user|avatar_color }}; color: #0f1117; font-weight: 700;">
+                                {{ mb.user|initials }}
+                            </div>
+                            <div>
+                                <div style="font-weight: 600; font-size: 0.85rem;">{{ mb.user.get_full_name|default:mb.user.username }}</div>
+                                <span class="badge {% if mb.role == 'admin' %}badge-positive{% endif %}" style="font-size: 0.62rem; padding: 1px 5px;">
+                                    {{ mb.get_role_display }}
+                                </span>
+                            </div>
                         </div>
-                        <div>
-                            <div style="font-weight: 600; font-size: 0.85rem;">{{ mb.user.get_full_name|default:mb.user.username }}</div>
-                            <span class="badge {% if mb.role == 'admin' %}badge-positive{% endif %}" style="font-size: 0.62rem; padding: 1px 5px;">
-                                {{ mb.get_role_display }}
-                            </span>
-                        </div>
+                        
+                        {% if is_admin and mb.user != user and mb.user != group.created_by %}
+                        <form method="POST" action="{% url 'remove_group_member' group.id mb.user.id %}" onsubmit="return confirm('Are you sure you want to remove {{ mb.user.username }} from the group?');">
+                            {% csrf_token %}
+                            <button type="submit" style="background: none; border: none; cursor: pointer; color: var(--color-negative); font-size: 0.82rem; padding: 2px;">
+                                ❌
+                            </button>
+                        </form>
+                        {% endif %}
                     </div>
-                    
-                    {% if is_admin and mb.user != user and mb.user != group.created_by %}
-                    <form method="POST" action="{% url 'remove_group_member' group.id mb.user.id %}" onsubmit="return confirm('Are you sure you want to remove {{ mb.user.username }} from the group?');">
-                        {% csrf_token %}
-                        <button type="submit" style="background: none; border: none; cursor: pointer; color: var(--color-negative); font-size: 0.82rem; padding: 2px;">
-                            ❌
-                        </button>
-                    </form>
-                    {% endif %}
+                    {% endfor %}
                 </div>
-                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Invite Link Card -->
+        <div class="card card-glass" style="display: flex; flex-direction: column; gap: var(--space-sm);">
+            <div class="card-header" style="padding-bottom: 0;">
+                <h2>🔗 Invite Link</h2>
+            </div>
+            <div class="card-body" style="padding-top: var(--space-xs);">
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: var(--space-sm);">Share this link with your friends so they can join directly.</p>
+                
+                <input type="text" id="inviteLink" value="{{ request.scheme }}://{{ request.get_host }}{% url 'join_group_via_link' group.invite_code %}" readonly class="form-control" style="font-size: 0.8rem; background: rgba(0,0,0,0.2); color: var(--text-secondary); margin-bottom: var(--space-sm); cursor: pointer; text-overflow: ellipsis;" onclick="copyInviteLink()">
+                
+                <button onclick="copyInviteLink()" class="btn btn-primary btn-sm" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 6px;">
+                    <span id="copyIcon">📋</span> <span id="copyText">Copy Link</span>
+                </button>
+
+                {% if is_admin %}
+                <form method="POST" action="{% url 'reset_group_invite_link' group.id %}" style="margin-top: var(--space-sm);" onsubmit="return confirm('Are you sure? The old invite link will stop working.');">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-ghost btn-sm" style="width: 100%; font-size: 0.75rem; color: var(--color-negative);">
+                        🔄 Reset Invite Link
+                    </button>
+                </form>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
+
+<script>
+function copyInviteLink() {
+    var copyText = document.getElementById("inviteLink");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999);
+    navigator.clipboard.writeText(copyText.value).then(function() {
+        document.getElementById("copyText").innerText = "Copied!";
+        document.getElementById("copyIcon").innerText = "✅";
+        setTimeout(() => {
+            document.getElementById("copyText").innerText = "Copy Link";
+            document.getElementById("copyIcon").innerText = "📋";
+        }, 2000);
+    });
+}
+</script>
 {% endblock %}

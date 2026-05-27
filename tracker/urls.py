@@ -16,9 +16,11 @@ urlpatterns = [
     # Groups
     path('groups/', views.group_list, name='group_list'),
     path('groups/create/', views.create_group, name='create_group'),
+    path('groups/join/<uuid:invite_code>/', views.join_group_via_link, name='join_group_via_link'),
     path('groups/<int:group_id>/', views.group_detail, name='group_detail'),
     path('groups/<int:group_id>/edit/', views.edit_group, name='edit_group'),
     path('groups/<int:group_id>/delete/', views.delete_group, name='delete_group'),
+    path('groups/<int:group_id>/reset-invite/', views.reset_group_invite_link, name='reset_group_invite_link'),
     path('groups/<int:group_id>/members/add/', views.add_group_member, name='add_group_member'),
     path('groups/<int:group_id>/members/<int:user_id>/remove/', views.remove_group_member, name='remove_group_member'),
     path('groups/<int:group_id>/balances/', views.group_balances, name='group_balances'),

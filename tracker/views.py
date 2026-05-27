@@ -414,6 +414,45 @@ def group_balances(request, group_id):
     return render(request, 'tracker/groups/balances.html', context)
 
 
+@login_required
+def join_group_via_link(request, invite_code):
+    """Join a group using an invite link."""
+    group = get_object_or_404(Group, invite_code=invite_code)
+    
+    # Check if already a member
+    if group.memberships.filter(user=request.user).exists():
+        messages.info(request, f"You are already a member of {group.name}.")
+        return redirect('group_detail', group_id=group.id)
+    
+    # Add member
+    GroupMembership.objects.create(group=group, user=request.user, role='member')
+    
+    log_activity(request.user, 'member_added', f'Joined group via invite link', group=group)
+    
+    messages.success(request, f"You have successfully joined {group.name}!")
+    return redirect('group_detail', group_id=group.id)
+
+
+@login_required
+def reset_group_invite_link(request, group_id):
+    """Reset the group's invite link."""
+    group = get_object_or_404(Group, id=group_id)
+    
+    # Check if user is admin (or created the group)
+    membership = group.memberships.filter(user=request.user).first()
+    if not membership or (membership.role != 'admin' and group.created_by != request.user):
+        messages.error(request, "Only group admins can reset the invite link.")
+        return redirect('group_detail', group_id=group.id)
+    
+    if request.method == 'POST':
+        import uuid
+        group.invite_code = uuid.uuid4()
+        group.save(update_fields=['invite_code'])
+        messages.success(request, "Invite link has been reset.")
+        
+    return redirect('group_detail', group_id=group.id)
+
+
 # ─────────────────────────────────────────────
 # Expenses
 # ─────────────────────────────────────────────
