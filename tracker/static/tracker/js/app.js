@@ -6,8 +6,14 @@
 document.addEventListener('DOMContentLoaded', function () {
 
   // ─── 0. Launch Splash Screen ────────────────────────────────
-  const splashPlayed = sessionStorage.getItem('splitlite_splash_played');
-  if (!splashPlayed) {
+  // Use localStorage so PWA cold launches always show splash
+  const splashKey = 'splitlite_splash_ts';
+  const lastSplash = localStorage.getItem(splashKey);
+  const now = Date.now();
+  // Show splash if never shown, or if more than 30 minutes have passed (covers PWA relaunch)
+  const showSplash = !lastSplash || (now - parseInt(lastSplash)) > 30 * 60 * 1000;
+
+  if (showSplash) {
     const splash = document.createElement('div');
     splash.className = 'splash-overlay';
     splash.id = 'appSplash';
@@ -43,22 +49,22 @@ document.addEventListener('DOMContentLoaded', function () {
     // Disable scrolling during splash
     document.body.style.overflow = 'hidden';
 
-    // Start transition to hide after 1.5 seconds
+    // Show for 2.5 seconds (credits animation needs ~0.6s delay + 0.8s to complete)
     setTimeout(function () {
       splash.style.opacity = '0';
       splash.style.pointerEvents = 'none';
-      
+
       // Restore scrolling
       document.body.style.overflow = '';
-      
-      // Completely remove element from DOM after fade animation (0.5s)
+
+      // Remove from DOM after fade
       setTimeout(function () {
         splash.remove();
       }, 500);
-    }, 1500);
+    }, 2500);
 
-    // Mark as played for the current session
-    sessionStorage.setItem('splitlite_splash_played', 'true');
+    // Record timestamp so PWA relaunches show it again after 30 min
+    localStorage.setItem(splashKey, String(now));
   }
 
   // ─── 1. Sidebar Toggle (Mobile) ─────────────────────────────
