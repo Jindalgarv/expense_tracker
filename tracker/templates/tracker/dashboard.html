@@ -6,8 +6,13 @@
 {% block content %}
 <div class="page-header animate-slide-up">
     <div>
-        <h1>Welcome back, {{ user.first_name|default:user.username }}!</h1>
-        <div class="page-subtitle">Here is what's happening with your expenses today.</div>
+        {% if user.username|lower == 'garv' or user.username|lower == 'admin' %}
+            <h1>Welcome back, Boss! 👑</h1>
+            <div class="page-subtitle">Here is what's happening with your expenses today.</div>
+        {% else %}
+            <h1>Welcome, {{ user.first_name|default:user.username }}! 🎉</h1>
+            <div class="page-subtitle">Garv welcomes you to SplitLite! Let's settle some bills.</div>
+        {% endif %}
     </div>
     <div class="flex gap-sm">
         <a href="{% url 'add_expense' %}" class="btn btn-primary">
