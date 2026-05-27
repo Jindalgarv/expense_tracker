@@ -38,12 +38,6 @@
             </div>
             {% endif %}
 
-            <!-- Description -->
-            <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
-                <label for="id_description" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Description</label>
-                {{ form.description }}
-            </div>
-
             <!-- Amount -->
             <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
                 <label for="id_amount" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Total Amount (₹)</label>
@@ -58,7 +52,7 @@
 
             <!-- Category -->
             <div class="form-group" style="display: flex; flex-direction: column; gap: var(--space-xs);">
-                <label for="id_category" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Category</label>
+                <label for="id_category" style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Category <span class="text-muted" style="font-weight:400;">(optional)</span></label>
                 {{ form.category }}
             </div>
 
@@ -110,7 +104,9 @@
                     <div class="member-split-card" id="member_card_{{ member.id }}" style="display: flex; flex-direction: column; gap: var(--space-xs); padding: var(--space-sm); border-radius: var(--radius-md); border: 1px solid var(--border-color); background: rgba(255,255,255,0.01);">
                         <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
                             <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; margin: 0; flex: 1;">
-                                <input type="checkbox" name="split_members" value="{{ member.id }}" checked onchange="updateSplitInputs()" style="width: 18px; height: 18px; accent-color: var(--color-primary);">
+                                <input type="checkbox" name="split_members" value="{{ member.id }}"
+                                    {% if member == user %}checked{% endif %}
+                                    onchange="updateSplitInputs()" style="width: 18px; height: 18px; accent-color: var(--color-primary);">
                                 <span class="avatar avatar-sm" style="background-color: {{ member|avatar_color }}; color: #0f1117; font-weight: 700;">
                                     {{ member|initials }}
                                 </span>

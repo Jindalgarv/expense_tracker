@@ -124,7 +124,7 @@ class Expense(models.Model):
         ('percentage', 'Split by Percentage'),
         ('shares', 'Split by Shares'),
     ]
-    description = models.CharField(max_length=200)
+    description = models.CharField(max_length=200, blank=True, default='Expense')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
     date = models.DateField()
     paid_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='expenses_paid')

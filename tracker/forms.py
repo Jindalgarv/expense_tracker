@@ -115,12 +115,8 @@ class ExpenseForm(forms.ModelForm):
 
     class Meta:
         model = Expense
-        fields = ['description', 'amount', 'date', 'category', 'split_type', 'notes']
+        fields = ['amount', 'date', 'category', 'split_type', 'notes']
         widgets = {
-            'description': forms.TextInput(attrs={
-                'class': 'form-input',
-                'placeholder': 'What was this expense for?',
-            }),
             'amount': forms.NumberInput(attrs={
                 'class': 'form-input',
                 'placeholder': '0.00',
@@ -143,6 +139,12 @@ class ExpenseForm(forms.ModelForm):
                 'rows': 3,
             }),
         }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make category optional — user doesn't have to pick one
+        self.fields['category'].required = False
+        self.fields['category'].empty_label = 'No category'
 
 
 class SettlementForm(forms.Form):
