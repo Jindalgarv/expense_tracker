@@ -765,6 +765,17 @@ def edit_expense(request, expense_id):
             create_expense_splits(expense, split_type, members, split_data)
             log_activity(request.user, 'expense_edited',
                          f'Edited "{expense.description}"', group=expense.group, expense=expense)
+                         
+            # Notifications for involved users
+            for member in members:
+                if member != request.user:
+                    create_notification(
+                        member,
+                        f"{request.user.get_full_name() or request.user.username} updated the expense \"{expense.description}\"",
+                        notification_type='expense',
+                        link=f'/expenses/{expense.id}/'
+                    )
+                         
             messages.success(request, 'Expense updated!')
             return redirect('expense_detail', expense_id=expense.id)
     else:
@@ -795,8 +806,23 @@ def delete_expense(request, expense_id):
     if request.method == 'POST':
         group = expense.group
         description = expense.description
+        
+        # Get members before deleting
+        involved_users = [s.user for s in expense.splits.all()]
+        
         expense.delete()
         log_activity(request.user, 'expense_deleted', f'Deleted "{description}"', group=group)
+        
+        # Send notifications
+        for member in involved_users:
+            if member != request.user:
+                create_notification(
+                    member,
+                    f"{request.user.get_full_name() or request.user.username} deleted the expense \"{description}\"",
+                    notification_type='expense',
+                    link='#'
+                )
+                
         messages.success(request, f'Expense "{description}" deleted.')
         if group:
             return redirect('group_detail', group_id=group.id)
