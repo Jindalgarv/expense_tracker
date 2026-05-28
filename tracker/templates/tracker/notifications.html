@@ -6,7 +6,7 @@
 {% block content %}
 <div class="page-header animate-slide-up">
     <div>
-        <h1>🔔 Notifications</h1>
+        <h1 style="display: flex; align-items: center; gap: 8px;"><i data-feather="bell"></i> Notifications</h1>
         <div class="page-subtitle">Stay updated on your shared expenses, groups, and settlements.</div>
     </div>
 </div>
@@ -18,17 +18,17 @@
                 {% for notif in notifications %}
                 <div style="display: flex; align-items: flex-start; justify-content: space-between; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-color); {% if not notif.is_read %}background: rgba(29, 209, 161, 0.03); border-left: 3px solid var(--color-primary);{% else %}background: rgba(255, 255, 255, 0.01);{% endif %} transition: background var(--transition-fast);">
                     <div style="display: flex; align-items: center; gap: var(--space-md); flex: 1;">
-                        <span style="font-size: 1.4rem;">
+                        <span style="font-size: 1.4rem; display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px;">
                             {% if notif.notification_type == 'expense' %}
-                            💰
+                            <i data-feather="dollar-sign"></i>
                             {% elif notif.notification_type == 'settlement' %}
-                            🤝
+                            <i data-feather="check-square"></i>
                             {% elif notif.notification_type == 'friend_request' %}
-                            👥
+                            <i data-feather="users"></i>
                             {% elif notif.notification_type == 'group' %}
-                            📁
+                            <i data-feather="folder"></i>
                             {% else %}
-                            🔔
+                            <i data-feather="bell"></i>
                             {% endif %}
                         </span>
                         <div>
@@ -47,8 +47,8 @@
                         </div>
                     </div>
                     {% if notif.link %}
-                    <a href="{% url 'mark_notification_read' notif.id %}" class="btn btn-ghost btn-sm" style="font-size: 0.75rem; padding: 4px 10px;">
-                        View ➡️
+                    <a href="{% url 'mark_notification_read' notif.id %}" class="btn btn-ghost btn-sm" style="font-size: 0.75rem; padding: 4px 10px; display: inline-flex; align-items: center; gap: 4px;">
+                        View <i data-feather="chevron-right" style="width: 14px; height: 14px;"></i>
                     </a>
                     {% endif %}
                 </div>
@@ -56,7 +56,7 @@
             </div>
         {% else %}
             <div class="empty-state" style="text-align: center; padding: var(--space-2xl) var(--space-xl); color: var(--text-secondary);">
-                <div style="font-size: 3rem; margin-bottom: var(--space-md);">🔔</div>
+                <div style="font-size: 3rem; margin-bottom: var(--space-md); display: inline-flex;"><i data-feather="bell" style="width: 48px; height: 48px;"></i></div>
                 <h3>All caught up!</h3>
                 <p style="font-size: 0.9rem; margin-top: 4px;">You have no new or recent notifications.</p>
             </div>

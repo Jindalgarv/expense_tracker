@@ -14,6 +14,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'tracker/css/style.css' %}">
+    <script src="https://unpkg.com/feather-icons"></script>
 </head>
 <body>
     <div class="app-layout">
@@ -48,39 +49,39 @@
             <nav class="sidebar-nav">
                 <div class="sidebar-section-label">General</div>
                 <a href="{% url 'dashboard' %}" class="nav-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                    <span class="nav-icon">🏠</span> Dashboard
+                    <span class="nav-icon"><i data-feather="home"></i></span> Dashboard
                 </a>
                 <a href="{% url 'notifications' %}" class="nav-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %}">
-                    <span class="nav-icon">🔔</span> Notifications
+                    <span class="nav-icon"><i data-feather="bell"></i></span> Notifications
                     {% if unread_notifications_count %}
                     <span class="nav-badge" style="background: var(--color-negative); margin-left: auto;">{{ unread_notifications_count }}</span>
                     {% endif %}
                 </a>
                 <a href="{% url 'friends_list' %}" class="nav-link {% if 'friend' in request.resolver_match.url_name %}active{% endif %}">
-                    <span class="nav-icon">👥</span> Friends
+                    <span class="nav-icon"><i data-feather="users"></i></span> Friends
                     {% if pending_requests_count %}
                     <span class="nav-badge">{{ pending_requests_count }}</span>
                     {% endif %}
                 </a>
                 <a href="{% url 'group_list' %}" class="nav-link {% if 'group' in request.resolver_match.url_name %}active{% endif %}">
-                    <span class="nav-icon">📁</span> Groups
+                    <span class="nav-icon"><i data-feather="folder"></i></span> Groups
                 </a>
                 <a href="{% url 'expense_list' %}" class="nav-link {% if request.resolver_match.url_name == 'expense_list' %}active{% endif %}">
-                    <span class="nav-icon">💰</span> Expenses
+                    <span class="nav-icon"><i data-feather="dollar-sign"></i></span> Expenses
                 </a>
 
                 <div class="sidebar-divider"></div>
                 <div class="sidebar-section-label">Analytics & Feed</div>
                 <a href="{% url 'activity_feed' %}" class="nav-link {% if request.resolver_match.url_name == 'activity_feed' %}active{% endif %}">
-                    <span class="nav-icon">📋</span> Activity Feed
+                    <span class="nav-icon"><i data-feather="activity"></i></span> Activity Feed
                 </a>
                 <a href="{% url 'monthly_report' %}" class="nav-link {% if request.resolver_match.url_name == 'monthly_report' %}active{% endif %}">
-                    <span class="nav-icon">📊</span> Reports
+                    <span class="nav-icon"><i data-feather="bar-chart-2"></i></span> Reports
                 </a>
 
                 <div class="sidebar-divider"></div>
                 <a href="{% url 'settle_up' %}" class="nav-link {% if request.resolver_match.url_name == 'settle_up' %}active{% endif %}" style="background: rgba(29, 209, 161, 0.1); border-left-color: var(--color-primary); color: var(--color-primary);">
-                    <span class="nav-icon">🤝</span> Settle Up
+                    <span class="nav-icon"><i data-feather="check-square"></i></span> Settle Up
                 </a>
             </nav>
 
@@ -93,11 +94,11 @@
                     <div class="user-name">{{ user.get_full_name|default:user.username }}</div>
                     <div class="user-email">{{ user.email|default:"No email set" }}</div>
                 </div>
-                <a href="{% url 'profile' %}" class="logout-btn" title="Profile Settings" style="margin-right: 6px;">⚙️</a>
+                <a href="{% url 'profile' %}" class="logout-btn" title="Profile Settings" style="margin-right: 6px;"><i data-feather="settings"></i></a>
                 <form method="POST" action="{% url 'logout' %}" style="display: inline-block;">
                     {% csrf_token %}
-                    <button type="submit" class="logout-btn" title="Logout" style="background: none; border: none; cursor: pointer; font-size: 1rem;">
-                        🚪
+                    <button type="submit" class="logout-btn" title="Logout" style="background: none; border: none; cursor: pointer; font-size: 1rem; padding: 0;">
+                        <i data-feather="log-out"></i>
                     </button>
                 </form>
             </div>
@@ -143,6 +144,9 @@
     </div>
     
     <script src="{% static 'tracker/js/app.js' %}"></script>
+    <script>
+        feather.replace({ width: '1em', height: '1em' });
+    </script>
     <script>
         // Custom interactive script logic (if any)
         function toggleSidebar() {

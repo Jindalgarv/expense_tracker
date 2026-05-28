@@ -11,13 +11,13 @@
     </div>
     <div class="flex gap-sm">
         <a href="{% url 'add_expense' %}" class="btn btn-primary">
-            <span style="font-size: 1.1rem; margin-right: 4px;">➕</span> Add Expense
+            <span style="margin-right: 4px; display: inline-flex; align-items: center;"><i data-feather="plus"></i></span> Add Expense
         </a>
         <a href="{% url 'create_group' %}" class="btn btn-secondary">
-            <span style="font-size: 1.1rem; margin-right: 4px;">📁</span> Create Group
+            <span style="margin-right: 4px; display: inline-flex; align-items: center;"><i data-feather="folder"></i></span> Create Group
         </a>
         <a href="{% url 'settle_up' %}" class="btn btn-outline-primary">
-            <span style="font-size: 1.1rem; margin-right: 4px;">🤝</span> Settle Up
+            <span style="margin-right: 4px; display: inline-flex; align-items: center;"><i data-feather="check-square"></i></span> Settle Up
         </a>
     </div>
 </div>
@@ -27,7 +27,7 @@
     <!-- Net Balance -->
     <div class="stat-card">
         <div class="stat-icon {% if balance_data.net_balance >= 0 %}green{% else %}red{% endif %}">
-            ⚖️
+            <i data-feather="pie-chart"></i>
         </div>
         <div class="stat-value {% if balance_data.net_balance > 0 %}text-positive{% elif balance_data.net_balance < 0 %}text-negative{% else %}text-muted{% endif %}" id="netBalanceVal">
             {{ balance_data.net_balance|currency }}
@@ -38,7 +38,7 @@
     <!-- Owed to You -->
     <div class="stat-card">
         <div class="stat-icon green">
-            📈
+            <i data-feather="trending-up"></i>
         </div>
         <div class="stat-value text-positive" id="owedToYouVal">
             {{ balance_data.total_owed_to_you|currency }}
@@ -49,7 +49,7 @@
     <!-- You Owe -->
     <div class="stat-card">
         <div class="stat-icon red">
-            📉
+            <i data-feather="trending-down"></i>
         </div>
         <div class="stat-value text-negative" id="youOweVal">
             {{ balance_data.total_you_owe|currency }}
@@ -63,7 +63,7 @@
     <!-- Left Column: Recent Activity Feed -->
     <div class="card card-glass desktop-only">
         <div class="card-header">
-            <h2>📋 Recent Activity</h2>
+            <h2 style="display: flex; align-items: center; gap: 8px;"><i data-feather="activity"></i> Recent Activity</h2>
             <a href="{% url 'activity_feed' %}" class="btn btn-ghost btn-sm">View Feed</a>
         </div>
         <div class="card-body">
@@ -83,8 +83,8 @@
                         </span>
                     </div>
                     {% if act.group %}
-                    <span style="font-size: 0.78rem; color: var(--color-accent); font-weight: 600;">
-                        📁 {{ act.group.name }}
+                    <span style="font-size: 0.78rem; color: var(--color-accent); font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                        <i data-feather="folder" style="width: 12px; height: 12px;"></i> {{ act.group.name }}
                     </span>
                     {% endif %}
                 </div>
@@ -105,7 +105,7 @@
         <!-- Your Groups -->
         <div class="card card-glass">
             <div class="card-header">
-                <h2>📁 Groups</h2>
+                <h2 style="display: flex; align-items: center; gap: 8px;"><i data-feather="folder"></i> Groups</h2>
                 <a href="{% url 'group_list' %}" class="btn btn-ghost btn-sm">All Groups</a>
             </div>
             <div class="card-body" style="display: flex; flex-direction: column; gap: var(--space-sm);">
@@ -119,7 +119,7 @@
                                 <div class="text-muted" style="font-size: 0.75rem;">{{ gp.memberships.count }} members</div>
                             </div>
                         </div>
-                        <span style="font-size: 0.85rem; font-weight: 600;">➡️</span>
+                        <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted);"><i data-feather="chevron-right"></i></span>
                     </a>
                     {% endfor %}
                 {% else %}
@@ -134,7 +134,7 @@
         <!-- Friends Balances -->
         <div class="card card-glass">
             <div class="card-header">
-                <h2>👥 Friends</h2>
+                <h2 style="display: flex; align-items: center; gap: 8px;"><i data-feather="users"></i> Friends</h2>
                 <a href="{% url 'friends_list' %}" class="btn btn-ghost btn-sm">All Friends</a>
             </div>
             <div class="card-body" style="display: flex; flex-direction: column; gap: var(--space-sm);">

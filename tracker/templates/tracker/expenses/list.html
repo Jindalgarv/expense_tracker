@@ -6,12 +6,12 @@
 {% block content %}
 <div class="page-header animate-slide-up">
     <div>
-        <h1>💰 Expenses</h1>
+        <h1 style="display: flex; align-items: center; gap: 8px;"><i data-feather="dollar-sign"></i> Expenses</h1>
         <div class="page-subtitle">A comprehensive list of shared expenses across your groups and friendships.</div>
     </div>
     <div>
-        <a href="{% url 'add_expense' %}" class="btn btn-primary">
-            ➕ Add Expense
+        <a href="{% url 'add_expense' %}" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 6px;">
+            <i data-feather="plus" style="width: 18px; height: 18px;"></i> Add Expense
         </a>
     </div>
 </div>
@@ -21,8 +21,8 @@
 
     <!-- Card 1: My spending (my share of what I paid) -->
     <div class="card card-glass" style="padding: var(--space-lg); display: flex; flex-direction: column; gap: 6px; border-top: 3px solid var(--color-primary);">
-        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
-            🧾 I Spent ({{ month_name }})
+        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px;">
+            <i data-feather="file-text" style="width: 12px; height: 12px;"></i> I Spent ({{ month_name }})
         </div>
         <div style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.55rem; color: var(--color-primary);">
             {{ my_expense_share|currency }}
@@ -32,8 +32,8 @@
 
     <!-- Card 2: I owe others -->
     <div class="card card-glass" style="padding: var(--space-lg); display: flex; flex-direction: column; gap: 6px; border-top: 3px solid var(--color-negative);">
-        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
-            💸 I Owe Others ({{ month_name }})
+        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px;">
+            <i data-feather="credit-card" style="width: 12px; height: 12px;"></i> I Owe Others ({{ month_name }})
         </div>
         <div style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.55rem; color: var(--color-negative);">
             {{ owed_to_others_share|currency }}
@@ -43,8 +43,8 @@
 
     <!-- Card 3: Total -->
     <div class="card card-glass" style="padding: var(--space-lg); display: flex; flex-direction: column; gap: 6px; border-top: 3px solid #5f27cd;">
-        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em;">
-            📊 Total ({{ month_name }})
+        <div style="font-size: 0.72rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: flex; align-items: center; gap: 4px;">
+            <i data-feather="bar-chart-2" style="width: 12px; height: 12px;"></i> Total ({{ month_name }})
         </div>
         <div style="font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.55rem; color: #a29bfe;">
             {{ total_monthly|currency }}
