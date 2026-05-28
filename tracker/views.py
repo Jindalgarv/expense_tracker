@@ -1208,6 +1208,7 @@ def service_worker(request):
 # ─────────────────────────────────────────────
 # Web Push Notifications
 # ─────────────────────────────────────────────
+from django.views.decorators.http import require_POST
 
 @login_required
 @require_POST
