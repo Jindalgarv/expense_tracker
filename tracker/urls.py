@@ -55,4 +55,8 @@ urlpatterns = [
     # Google Authentication
     path('accounts/google/login/', views.google_login, name='google_login'),
     path('accounts/google/callback/', views.google_callback, name='google_callback'),
+
+    # Web Push
+    path('api/push/subscribe/', views.subscribe_push, name='subscribe_push'),
+    path('api/push/vapid-public-key/', views.get_vapid_public_key, name='vapid_public_key'),
 ]

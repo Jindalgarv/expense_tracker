@@ -133,3 +133,8 @@ SESSION_SAVE_EVERY_REQUEST = True
 
 # Email (use env vars in production)
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Web Push Notifications
+VAPID_PRIVATE_KEY = config('VAPID_PRIVATE_KEY', default=os.path.join(BASE_DIR, 'private_key.pem'))
+VAPID_PUBLIC_KEY = config('VAPID_PUBLIC_KEY', default=os.path.join(BASE_DIR, 'public_key.pem'))
+VAPID_ADMIN_EMAIL = 'mailto:admin@splitlite.com'

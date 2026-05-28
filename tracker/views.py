@@ -1204,3 +1204,45 @@ def service_worker(request):
     with open(sw_path, 'r') as f:
         return HttpResponse(f.read(), content_type='application/javascript')
 
+
+# ─────────────────────────────────────────────
+# Web Push Notifications
+# ─────────────────────────────────────────────
+
+@login_required
+@require_POST
+def subscribe_push(request):
+    import json
+    from .models import PushSubscription
+    try:
+        data = json.loads(request.body)
+        endpoint = data.get('endpoint')
+        keys = data.get('keys', {})
+        p256dh = keys.get('p256dh')
+        auth = keys.get('auth')
+
+        if not endpoint or not p256dh or not auth:
+            return JsonResponse({'status': 'error', 'message': 'Missing data'}, status=400)
+
+        subscription, created = PushSubscription.objects.get_or_create(
+            user=request.user,
+            endpoint=endpoint,
+            defaults={'p256dh': p256dh, 'auth': auth}
+        )
+        
+        if not created:
+            subscription.p256dh = p256dh
+            subscription.auth = auth
+            subscription.save()
+
+        return JsonResponse({'status': 'ok'})
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+@login_required
+def get_vapid_public_key(request):
+    from django.conf import settings
+    # Read the PEM file and convert to base64 for frontend, OR if we had it as string we'd just send it.
+    # We already extracted it manually:
+    public_key = "BH0BAnhPYXGfYR7yTg0_XEYKjjtJPTzdH16oS4r2-Kg8hzzmkdug2yo1U2C1yWrQqyHeQ0BfKNkWjSubHj6WXTw"
+    return JsonResponse({'public_key': public_key})

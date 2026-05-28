@@ -588,6 +588,72 @@ document.addEventListener('DOMContentLoaded', function () {
     } else if (href && href !== '/' && currentPath.startsWith(href)) {
       link.classList.add('active');
     }
-  });
+  // ─── Web Push Notifications ──────────────────────────────
+  function urlBase64ToUint8Array(base64String) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+      .replace(/\-/g, '+')
+      .replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) {
+      outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+  }
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  function subscribeToPush() {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    
+    Notification.requestPermission().then(function(permission) {
+      if (permission === 'granted') {
+        navigator.serviceWorker.ready.then(function(registration) {
+          fetch('/api/push/vapid-public-key/')
+            .then(response => response.json())
+            .then(data => {
+              const convertedVapidKey = urlBase64ToUint8Array(data.public_key);
+              return registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: convertedVapidKey
+              });
+            })
+            .then(function(subscription) {
+              return fetch('/api/push/subscribe/', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(subscription)
+              });
+            })
+            .then(function(response) {
+              if (response.ok) console.log('Successfully subscribed to push notifications.');
+            })
+            .catch(function(err) {
+              console.error('Failed to subscribe the user: ', err);
+            });
+        });
+      }
+    });
+  }
+
+  // Attempt subscription after a slight delay to not block rendering
+  setTimeout(subscribeToPush, 2000);
 
 });

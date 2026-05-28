@@ -1,5 +1,7 @@
 from decimal import Decimal, ROUND_HALF_UP
-
+import json
+from pywebpush import webpush, WebPushException
+from django.conf import settings
 from django.contrib.auth.models import User
 from django.db.models import Q
 
@@ -12,6 +14,7 @@ from .models import (
     GroupMembership,
     Notification,
     Settlement,
+    PushSubscription,
 )
 
 
@@ -378,9 +381,43 @@ def create_notification(user, message, notification_type='expense', link=''):
     """
     Create and return a ``Notification`` record for *user*.
     """
-    return Notification.objects.create(
+    notification = Notification.objects.create(
         user=user,
         message=message,
         notification_type=notification_type,
         link=link,
     )
+    
+    # Send Web Push Notification
+    subscriptions = PushSubscription.objects.filter(user=user)
+    if subscriptions.exists():
+        payload = json.dumps({
+            'title': 'SplitLite',
+            'body': message,
+            'url': link or '/',
+            'icon': '/static/tracker/icon-192.png'
+        })
+        
+        for sub in subscriptions:
+            try:
+                webpush(
+                    subscription_info={
+                        "endpoint": sub.endpoint,
+                        "keys": {
+                            "p256dh": sub.p256dh,
+                            "auth": sub.auth
+                        }
+                    },
+                    data=payload,
+                    vapid_private_key=settings.VAPID_PRIVATE_KEY,
+                    vapid_claims={"sub": settings.VAPID_ADMIN_EMAIL}
+                )
+            except WebPushException as ex:
+                # If subscription is expired or invalid, remove it
+                if ex.response and ex.response.status_code in [404, 410]:
+                    sub.delete()
+                print(f"Web Push Error: {ex}")
+            except Exception as e:
+                print(f"Web Push Exception: {e}")
+                
+    return notification
