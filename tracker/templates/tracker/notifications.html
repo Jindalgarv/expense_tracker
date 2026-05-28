@@ -16,7 +16,7 @@
         {% if notifications %}
             <div style="display: flex; flex-direction: column;">
                 {% for notif in notifications %}
-                <div style="display: flex; align-items: flex-start; justify-content: space-between; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-color); {% if notnotif.is_read %}background: rgba(255, 255, 255, 0.01);{% else %}background: rgba(29, 209, 161, 0.03); border-left: 3px solid var(--color-primary);{% endif %} transition: background var(--transition-fast);">
+                <div style="display: flex; align-items: flex-start; justify-content: space-between; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-color); {% if not notif.is_read %}background: rgba(29, 209, 161, 0.03); border-left: 3px solid var(--color-primary);{% else %}background: rgba(255, 255, 255, 0.01);{% endif %} transition: background var(--transition-fast);">
                     <div style="display: flex; align-items: center; gap: var(--space-md); flex: 1;">
                         <span style="font-size: 1.4rem;">
                             {% if notif.notification_type == 'expense' %}

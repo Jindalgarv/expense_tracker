@@ -925,10 +925,11 @@ def activity_feed(request):
 
 @login_required
 def notifications(request):
-    """View all notifications."""
-    user_notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:50]
-    # Mark all as read
-    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    """View all unread notifications."""
+    user_notifications = list(Notification.objects.filter(user=request.user, is_read=False).order_by('-created_at')[:50])
+    # Mark the fetched notifications as read
+    if user_notifications:
+        Notification.objects.filter(id__in=[n.id for n in user_notifications]).update(is_read=True)
     return render(request, 'tracker/notifications.html', {'notifications': user_notifications})
 
 
